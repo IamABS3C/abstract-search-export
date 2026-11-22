@@ -75,6 +75,8 @@ jobs:
           [ "${user}" = "${DOCKERHUB_USERNAME}" ] || echo "::warning::DOCKERHUB_USERNAME had spaces or line breaks around it; they were removed."
           [ "${token}" = "${DOCKERHUB_TOKEN}" ] || echo "::warning::DOCKERHUB_TOKEN had spaces or line breaks around it; they were removed."
           if [ -z "${token}" ]; then echo "::error::DOCKERHUB_TOKEN is empty. Set it to a Docker Hub access token with Read and Write."; exit 1; fi
+          if [ "${user}" = "${token}" ]; then echo "::error::DOCKERHUB_USERNAME holds the access token. Set it to your Docker ID (the name in hub.docker.com/u/<name>); the token belongs in DOCKERHUB_TOKEN only."; exit 1; fi
+          if [ "${#user}" -lt 4 ] || [ "${#user}" -gt 30 ]; then echo "::error::DOCKERHUB_USERNAME is ${#user} characters, and a Docker ID is 4 to 30. Set it to your Docker ID (the name in hub.docker.com/u/<name>), not an access token or an account number."; exit 1; fi
           case "${user}" in
             *@*) echo "::error::DOCKERHUB_USERNAME is an email address. Set it to your Docker ID (the name in hub.docker.com/u/<name>)."; exit 1 ;;
             *[!a-zA-Z0-9_-]*) echo "::error::DOCKERHUB_USERNAME has a character a Docker ID cannot have. Set it to your Docker ID only."; exit 1 ;;
