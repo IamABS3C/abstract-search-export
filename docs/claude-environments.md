@@ -139,7 +139,7 @@ The Compose file runs one session per container (`--capacity 1`), which is what 
 | The session start-up script, the MCP server and the command line | Run on a computer and in CI on every push. |
 | The mode where the network adds the key | Unit tests: the tool sends no `Authorization` header, and a 401 names the secret. It follows Anthropic's documented behaviour for network secrets (read 2026-11-21). It has not yet been run in a live cloud session. |
 | The self-hosted runner files | Built from Anthropic's published recipe (read 2026-11-21). |
-| The Claude Code plugin | `claude plugin validate` passes. Installed from a local copy of the marketplace into a separate Claude Code configuration with its settings given as `--config`: the skill and the agent load, and the MCP server connects. |
+| The Claude Code plugin | `claude plugin validate` passes. Installed from this repository's marketplace on GitHub into a separate Claude Code configuration, with its settings given as `--config`: the tool is copied into the plugin cache, the skill and the agent load, the MCP server connects, and its `status` tool named the test tenant with the API key read through a key command and an unfilled key setting ignored. |
 | The Claude Desktop extension | The manifest passes the official `mcpb validate`, and the build checks that the bundled server answers. It has not yet been installed in Claude Desktop by a person. |
 
 If a session behaves differently from this page, open an issue with what `status` printed.

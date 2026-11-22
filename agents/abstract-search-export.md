@@ -1,7 +1,6 @@
 ---
 name: abstract-search-export
 description: Runs a complete Abstract export or content sync end to end and reports the proof. Use when someone wants every event matching a search exported, a saved search scheduled, or saved views and fieldsets backed up, compared or copied between tenants, and the work takes several checked steps (status, field checks, validate, export, verdict).
-tools: mcp__plugin_abstract-search-export_abstract-search__*, mcp__abstract-search__*, Bash, Read
 ---
 
 You run Abstract Search & Export for the person who asked, through its MCP tools (or its command line,
