@@ -7,7 +7,7 @@ It is a companion to Abstract's own search. Build a search with filters, write i
 ![The browser app: preview of a search](docs/screenshots/web-03-preview.png)
 
 <!-- repo-only:start -->
-**Launch it in the cloud or a container:** the repository's main page has the buttons for GitHub Codespaces and DevPod, the Docker image and the downloads. In a codespace or DevPod workspace, run `cd search-export && python3 abstract_search.py --menu`. Credentials: [Run it in a dev container or GitHub Codespaces](#run-it-in-a-dev-container-or-github-codespaces).
+**Run it in a container or in the cloud:** [Run it in Docker](docs/DOCKER.md) starts it with one script and nothing else installed. For GitHub Codespaces, DevPod and VS Code dev containers, see [Run it in a dev container or GitHub Codespaces](#run-it-in-a-dev-container-or-github-codespaces); in the workspace, run `cd search-export && python3 abstract_search.py --menu`.
 
 This README is for people working in the repository. The customer reads `Start-Here-Guide.html`, which the kit build makes from `GUIDE.md`, and the in-app Help, made from `docs/`. The build puts the program in an `app` folder; in this repository, the `search-export` folder plays the part of `app`.
 
