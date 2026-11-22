@@ -1,0 +1,163 @@
+/* rocket-a.css: the Abstract mark as a rocket. Drop-in, no dependencies beyond the shared Abstract dark tokens it names
+ * (--motion-*, --ease-*, --spring-snap, --hold, --nogo, --go, --font-code); every one has a fallback.
+ *
+ * THE RULE: the mark is only ever moved, rotated and scaled as a whole. Its four paths are the official
+ * asset and are never edited, reordered, recoloured or animated on their own. The exhaust is three separate
+ * layers drawn BEHIND the mark. One rocket per viewport; the header logo is the plain untilted mark, never this.
+ *
+ * Markup (built by RocketA.mount in rocket-a.js; a React component renders the same tree):
+ *   <span class="rocket-a" data-state="idle" style="--ra-size:96px">
+ *     <span class="rocket-a__body"><span class="rocket-a__lean">
+ *       <span class="rocket-a__bloom"></span>
+ *       <span class="rocket-a__engine"><span class="rocket-a__plume"></span><span class="rocket-a__core"></span></span>
+ *       <svg class="rocket-a__mark" viewBox="0 0 168.948 149.981" aria-hidden="true"><use href="#rocket-a-mark"/></svg>
+ *     </span></span>
+ *     <span class="rocket-a__clamps"><i></i><i></i></span>      optional: hold-down clamps at the feet
+ *     <span class="rocket-a__pad"></span>                       optional: a hairline pad under the feet
+ *     <span class="rocket-a__tag" hidden></span>                hold / no-go reason, sentence case in the source
+ *   </span>
+ *
+ * Inputs (custom properties on .rocket-a):
+ *   --ra-size     width of the mark. Sizes in use: 16, 24, 48, 96, 160, 190 px. Below 16 px use the plain mark.
+ *   --ra-thrust   0 to 1. Plume length and brightness. States set a default; script may override it inline.
+ *   --ra-heading  rotation of the whole mark. 0deg is nose up (the apex sits on the centre line).
+ *   --ra-gx       -1 to 1. Gimbal: the engine swings toward the pointer, the body leans a little after it.
+ *   --ra-stretch  0 to 0.5. Extra plume length at speed (lift-off only).
+ *   --ra-x, --ra-y  viewport position of the mark's centre, in px, when data-free is set.
+ *   --ra-scale    optional scale of a free rocket in flight, so size can change without layout.
+ *
+ * States (data-state):
+ *   off      no exhaust, still.                         idle     on the pad, glow breathing under the tail.
+ *   ignite   engine lit, clamps holding, 2 px strain.   liftoff  full thrust, clamps open; the host moves it.
+ *   orbit    half thrust, rides the orbit loader.       dock     on the flight track, a small steady plume.
+ *   hold     plume dimmed, amber diamond and reason.    nogo     engine out, red square and reason.
+ */
+
+.rocket-a {
+  --ra-size: 96px; --ra-thrust: 0; --ra-heading: 0deg; --ra-gx: 0; --ra-stretch: 0; --ra-glow: 0; --ra-x: 0; --ra-y: 0;
+  position: relative; display: inline-block; flex: none;
+  inline-size: var(--ra-size); block-size: calc(var(--ra-size) * 0.8877);
+  line-height: 0; pointer-events: none; -webkit-user-select: none; user-select: none;
+}
+.rocket-a[data-free] {
+  position: fixed; inset: 0 auto auto 0; z-index: 40; will-change: transform;
+  transform: translate3d(calc(var(--ra-x) * 1px - 50%), calc(var(--ra-y) * 1px - 50%), 0) scale(var(--ra-scale, 1));
+}
+.rocket-a__body {
+  position: absolute; inset: 0; transform-origin: 50% 50%;
+  transform: rotate(var(--ra-heading));
+  transition: transform var(--motion-travel, 700ms) var(--ease-travel, cubic-bezier(.16, 1, .3, 1));
+}
+.rocket-a__lean {
+  position: absolute; inset: 0; transform-origin: 50% 100%;
+  transform: rotate(calc(var(--ra-gx) * 4deg));
+  transition: transform var(--motion-travel, 700ms) var(--ease-travel, cubic-bezier(.16, 1, .3, 1));
+}
+.rocket-a__mark { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+
+/* ---------------------------------------------------------------- exhaust: bloom, plume, core (all behind the mark) */
+.rocket-a__bloom {
+  position: absolute; left: 49.7%; top: 86%; translate: -50% -50%;
+  inline-size: calc(var(--ra-size) * 2.8); block-size: calc(var(--ra-size) * 2.8); border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 33 107 / 0.20), transparent 62%);
+  opacity: calc(var(--ra-glow) + var(--ra-thrust) * 0.8);
+  transition: opacity var(--motion-travel, 700ms) var(--ease-travel, cubic-bezier(.16, 1, .3, 1));
+}
+.rocket-a__engine {
+  position: absolute; inset: 0; transform-origin: 49.7% 76%;
+  transform: rotate(calc(var(--ra-gx) * -10deg));
+  transition: transform 420ms var(--ease-travel, cubic-bezier(.16, 1, .3, 1));
+}
+.rocket-a__plume, .rocket-a__core {
+  position: absolute; left: 49.7%; translate: -50% 0; transform-origin: 50% 0;
+  transform: scaleY(calc(0.3 + var(--ra-thrust) * 0.8 + var(--ra-stretch)));
+  opacity: calc(var(--ra-thrust) * 1.6);
+  transition: transform var(--motion-travel, 700ms) var(--ease-travel, cubic-bezier(.16, 1, .3, 1)),
+    opacity var(--motion-travel, 700ms) var(--ease-travel, cubic-bezier(.16, 1, .3, 1));
+}
+.rocket-a__plume {
+  top: 74%; inline-size: calc(var(--ra-size) * 0.58); block-size: calc(var(--ra-size) * 1.17);
+  background: radial-gradient(ellipse 50% 60% at 50% 12%, rgb(255 33 107 / 0.9), rgb(255 33 107 / 0.28) 55%, transparent);
+  filter: blur(calc(var(--ra-size) * 0.05));
+}
+.rocket-a__core {
+  top: 79%; inline-size: calc(var(--ra-size) * 0.15); block-size: calc(var(--ra-size) * 0.46);
+  background: radial-gradient(ellipse 50% 55% at 50% 10%, #fff, rgb(255 214 228 / 0.92) 35%, transparent 72%);
+}
+
+/* ---------------------------------------------------------------- pad furniture (optional) */
+.rocket-a__pad {
+  position: absolute; left: 4%; right: 2%; top: calc(100% + 1px); block-size: 1px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.42) 18%, rgb(255 255 255 / 0.42) 82%, transparent);
+}
+.rocket-a__clamps { position: absolute; inset: 0; }
+.rocket-a__clamps i {
+  position: absolute; top: 80%; block-size: 22%; inline-size: max(2px, calc(var(--ra-size) * 0.014));
+  background: rgb(255 255 255 / 0.55); border-radius: 1px; transform-origin: 50% 100%;
+  transition: transform var(--motion-fast, 180ms) var(--ease-standard, cubic-bezier(.2, 0, .2, 1)), opacity var(--motion-base, 320ms) linear;
+}
+.rocket-a__clamps i:first-child { left: 10.5%; transform: rotate(14deg); }
+.rocket-a__clamps i:last-child { left: 96%; transform: rotate(-14deg); }
+.rocket-a:is([data-state="liftoff"], [data-state="dock"], [data-state="orbit"]) .rocket-a__clamps i:first-child { transform: rotate(-52deg); opacity: 0; }
+.rocket-a:is([data-state="liftoff"], [data-state="dock"], [data-state="orbit"]) .rocket-a__clamps i:last-child { transform: rotate(52deg); opacity: 0; }
+
+/* ---------------------------------------------------------------- the reason tag: shape and word, never colour alone */
+.rocket-a__tag {
+  position: absolute; left: calc(100% + 10px); top: 50%; translate: 0 -50%;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; pointer-events: auto;
+  font: 700 11px/1 var(--font-code, ui-monospace, monospace); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--hold, #f5c61e); background: var(--surface-app, #060608); padding: 3px 7px; border-radius: 3px;
+}
+.rocket-a__tag[hidden] { display: none; }
+.rocket-a__tag::before { content: ""; inline-size: 7px; block-size: 7px; background: currentColor; rotate: 45deg; }
+.rocket-a[data-state="nogo"] .rocket-a__tag { color: var(--nogo, #ff5c5c); }
+.rocket-a[data-state="nogo"] .rocket-a__tag::before { rotate: none; }
+.rocket-a[data-tag="above"] .rocket-a__tag { left: 50%; top: auto; bottom: calc(100% + 8px); translate: -50% 0; }
+.rocket-a[data-tag="below"] .rocket-a__tag { left: 50%; top: calc(100% + 10px); translate: -50% 0; }
+
+/* ---------------------------------------------------------------- states */
+.rocket-a[data-state="off"], .rocket-a[data-state="nogo"] { --ra-thrust: 0; }
+.rocket-a[data-state="idle"] { --ra-thrust: 0; --ra-glow: 0.22; }
+.rocket-a[data-state="idle"] .rocket-a__bloom { animation: ra-breathe 2.4s ease-in-out infinite alternate; }
+.rocket-a[data-state="ignite"] { --ra-thrust: 0.55; }
+.rocket-a[data-state="ignite"] .rocket-a__lean { animation: ra-strain 1.2s ease-in-out infinite; }
+.rocket-a[data-state="liftoff"] { --ra-thrust: 1; }
+.rocket-a[data-state="orbit"] { --ra-thrust: 0.5; }
+.rocket-a[data-state="dock"] { --ra-thrust: 0.35; }
+.rocket-a[data-state="dock"] .rocket-a__lean { animation: ra-dock 420ms var(--spring-snap, cubic-bezier(.2, 1.4, .4, 1)) 1 both; }
+.rocket-a[data-state="hold"] { --ra-thrust: 0.32; }
+.rocket-a:is([data-state="ignite"], [data-state="liftoff"], [data-state="orbit"], [data-state="dock"]) .rocket-a__engine { animation: ra-plume 1.8s ease-in-out infinite alternate; }
+/* Engines do not fade out: a cut is instant. In flight the host writes the heading every frame, so nothing eases. */
+.rocket-a:is([data-state="nogo"], [data-state="off"]) :is(.rocket-a__plume, .rocket-a__core, .rocket-a__bloom) { transition-duration: 0s; }
+.rocket-a:is([data-state="liftoff"], [data-state="orbit"]) :is(.rocket-a__body, .rocket-a__lean) { transition: none; }
+
+@keyframes ra-breathe { from { opacity: 0.22; } to { opacity: 0.42; } }
+@keyframes ra-plume { from { opacity: 0.7; } to { opacity: 1; } }                      /* 0.56 Hz: far below the 3 Hz limit */
+@keyframes ra-strain { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2px; } }
+@keyframes ra-dock { from { translate: 0 7px; } to { translate: 0 0; } }
+
+/* ---------------------------------------------------------------- the orbit loader (long waits; built by RocketA.orbit) */
+.rocket-orbit { position: relative; inline-size: 200px; max-inline-size: 100%; aspect-ratio: 200 / 160; }
+.rocket-orbit__svg { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+.rocket-orbit__path { fill: none; stroke: rgb(255 255 255 / 0.30); stroke-width: 1.2; stroke-dasharray: 1 6; stroke-linecap: round; }
+.rocket-orbit__arc { fill: none; stroke: var(--go, #01e69d); stroke-width: 2; stroke-linecap: round; }
+.rocket-orbit__tick { fill: var(--surface-app, #060608); stroke: rgb(255 255 255 / 0.55); stroke-width: 1.4; }
+.rocket-orbit__tick[data-done] { fill: var(--go, #01e69d); stroke: var(--go, #01e69d); }
+.rocket-orbit__tick[data-now] { stroke: var(--brand-pink, #FF216B); stroke-width: 2; }
+.rocket-orbit__planet { fill: var(--brand-pink, #FF216B); }
+.rocket-orbit__halo { fill: rgb(255 33 107 / 0.16); }
+.rocket-orbit__ship { position: absolute; left: 0; top: 0; translate: -50% -50%; }
+.rocket-orbit[data-done] .rocket-orbit__path { stroke: transparent; }
+.rocket-orbit[data-failed] .rocket-orbit__arc { stroke: var(--nogo, #ff5c5c); }
+
+/* ---------------------------------------------------------------- motion off: every state keeps its still pose */
+@media (prefers-reduced-motion: reduce) {
+  .rocket-a :is(.rocket-a__body, .rocket-a__lean, .rocket-a__engine, .rocket-a__bloom, .rocket-a__plume, .rocket-a__core, .rocket-a__clamps i) {
+    animation: none !important; transition: none !important;
+  }
+  .rocket-a { --ra-gx: 0 !important; --ra-stretch: 0 !important; }
+}
+html[data-motion="off"] .rocket-a :is(.rocket-a__body, .rocket-a__lean, .rocket-a__engine, .rocket-a__bloom, .rocket-a__plume, .rocket-a__core, .rocket-a__clamps i) {
+  animation: none !important; transition: none !important;
+}
+html[data-motion="off"] .rocket-a { --ra-gx: 0 !important; --ra-stretch: 0 !important; }

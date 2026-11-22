@@ -1,0 +1,83 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Python 3.8 builds exist only for the older runner images
+          - {os: ubuntu-22.04, python-version: "3.8"}
+          - {os: ubuntu-latest, python-version: "3.12"}
+          - {os: ubuntu-latest, python-version: "3.13"}
+          - {os: windows-latest, python-version: "3.12"}
+          - {os: macos-latest, python-version: "3.12"}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Offline tests
+        working-directory: search-export/tests
+        run: python -m unittest discover -q
+      - name: The command line starts
+        run: python search-export/abstract_search.py --version
+
+  repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JSON configs parse
+        run: |
+          python3 - <<'PY'
+          import json
+          for f in (".mcp.json", ".vscode/mcp.json", ".devcontainer/devcontainer.json", ".claude/settings.json",
+                    "search-export/.devcontainer/devcontainer.json"):
+              json.load(open(f))
+              print("ok", f)
+          PY
+      - name: Shell scripts are clean
+        run: shellcheck -s sh scripts/welcome.sh scripts/session-start.sh search-export/run-docker.sh run.sh
+      - name: Every screen and capability is documented
+        run: python3 search-export/tools/coverage_matrix.py > coverage.txt || { tail -n 40 coverage.txt; exit 1; }; tail -n 2 coverage.txt
+      - name: The session script never fails a session
+        run: |
+          env -u ABSTRACT_API_KEY CLAUDE_PROJECT_DIR="$PWD" CLAUDE_CODE_REMOTE=true sh scripts/session-start.sh
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t abstract-search-export:ci search-export
+      - name: The browser app starts, unprivileged and read-only
+        run: |
+          mkdir -p exports
+          docker run -d --name app -p 127.0.0.1:8765:8765 --read-only --tmpfs /tmp --cap-drop ALL \
+            --security-opt no-new-privileges -v "$PWD/exports:/exports" --user "$(id -u):$(id -g)" abstract-search-export:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8765/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8765/healthz | grep -q '"ok": true'
+          docker logs app 2>&1 | grep -q 'http://127.0.0.1:8765/?code='
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/api/state)" = 403
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: other.example' http://127.0.0.1:8765/healthz)" = 403
+      - name: It stops at once when asked
+        run: |
+          start=$(date +%s)
+          docker stop app
+          test $(( $(date +%s) - start )) -lt 8
+          test "$(docker inspect -f '{{.State.ExitCode}}' app)" = 0
+      - name: One command runs and exits
+        run: docker run --rm abstract-search-export:ci --version

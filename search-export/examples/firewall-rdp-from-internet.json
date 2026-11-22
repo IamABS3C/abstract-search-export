@@ -1,0 +1,13 @@
+{
+  "name": "firewall-rdp-from-internet",
+  "mode": "simple",
+  "dataset": "Palo Alto Firewall",
+  "filters": [
+    {"field": "dest_port", "op": "IS_IN_LIST", "type": "Float64", "value": "3389"},
+    {"field": "source_ipv4", "op": "IS_NOT_RFC1918", "type": "Ipv4", "value": ""}
+  ],
+  "time": {"last": "24h"},
+  "fields": ["@timestamp", "id", "source_ipv4", "dest_ipv4", "dest_port", "action", "data_stream.dataset"],
+  "full_documents": false,
+  "format": "ndjson.gz"
+}

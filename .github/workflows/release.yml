@@ -1,0 +1,192 @@
+name: release
+
+# A tag v<version> publishes that version: the container image (GitHub's registry, and Docker Hub when its two
+# secrets exist), a single-file program for each system, and a GitHub release that carries them with checksums.
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN   repository secrets; without them the Docker Hub push is skipped
+#   DOCKERHUB_NAMESPACE                   repository variable, optional: the Docker Hub account or organisation
+#                                         to publish under (default: DOCKERHUB_USERNAME)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      minor: ${{ steps.v.outputs.minor }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: The tag matches the VERSION file
+        run: |
+          version=$(tr -d ' \r\n' < search-export/VERSION)
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match search-export/VERSION (${version})" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "minor=${version%.*}" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: [test, version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      MINOR: ${{ needs.version.outputs.minor }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Sign in to GitHub's registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - id: names
+        name: Image names
+        run: |
+          ghcr="ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          tags="${ghcr}:${VERSION},${ghcr}:${MINOR},${ghcr}:latest"
+          if [ -n "${DOCKERHUB_USERNAME}" ]; then
+            hub="$(echo "${DOCKERHUB_NAMESPACE:-$DOCKERHUB_USERNAME}" | tr '[:upper:]' '[:lower:]')/abstract-search-export"
+            tags="${tags},${hub}:${VERSION},${hub}:${MINOR},${hub}:latest"
+            echo "hub=${hub}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ghcr=${ghcr}" >> "$GITHUB_OUTPUT"
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+      - id: build
+        name: Build and push, for Intel and Arm
+        uses: docker/build-push-action@v6
+        with:
+          context: search-export
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.names.outputs.tags }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            REVISION=${{ github.sha }}
+            SOURCE=${{ github.server_url }}/${{ github.repository }}
+          provenance: mode=max
+          sbom: true
+      - name: Record where the image was built
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ steps.names.outputs.ghcr }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: The published image runs
+        run: |
+          docker run --rm "${{ steps.names.outputs.ghcr }}@${{ steps.build.outputs.digest }}" --version | grep -q "${VERSION}"
+          {
+            echo "### Image"
+            echo ""
+            echo "\`${{ steps.names.outputs.ghcr }}:${VERSION}\` (\`${{ steps.build.outputs.digest }}\`)"
+            if [ -n "${{ steps.names.outputs.hub }}" ]; then echo "\`${{ steps.names.outputs.hub }}:${VERSION}\` on Docker Hub"; else echo "Docker Hub: skipped (no DOCKERHUB_USERNAME secret)"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  binaries:
+    needs: [test, version]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the single-file program and prove it starts
+        run: |
+          python -m pip install --disable-pip-version-check pyinstaller==6.22.3
+          python scripts/build-binary.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}
+          path: dist/abstract-search-*
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: [version, image, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: binary-*
+          merge-multiple: true
+      - name: Source archive and checksums
+        run: |
+          git archive --format=zip --prefix="abstract-search-export-${VERSION}/" -o "dist/abstract-search-export-${VERSION}-source.zip" HEAD search-export
+          cd dist
+          chmod +x abstract-search-*-linux-* abstract-search-*-macos-* 2>/dev/null || true
+          sha256sum abstract-search-* > SHA256SUMS
+          cat SHA256SUMS
+      - name: Record where the files were built
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/abstract-search-*
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          cat > notes.md <<EOF
+          ## Run it
+
+          **Docker** (nothing else to install):
+
+          \`\`\`
+          docker run --rm -p 127.0.0.1:8765:8765 -v "\$HOME/AbstractExports:/exports" ${image}:${VERSION}
+          \`\`\`
+
+          Open the link it prints, then connect with your vendor account ID and API key.
+
+          **A single file** (no Python, no Docker): download the file for your system below, check it against \`SHA256SUMS\`, and run it. \`abstract-search --web\` opens the browser app; with no arguments it opens the guided terminal.
+
+          **Python 3.8 or newer:** download the source archive and run \`python3 search-export/abstract_search.py --web\`.
+
+          Every file below and the image carry a build record: \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`.
+          EOF
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/abstract-search-* dist/SHA256SUMS --clobber
+            gh release edit "${GITHUB_REF_NAME}" --notes-file notes.md
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/abstract-search-* dist/SHA256SUMS \
+              --title "Abstract Search & Export ${VERSION}" --notes-file notes.md --verify-tag
+          fi

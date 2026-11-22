@@ -1,0 +1,36 @@
+{
+  "name": "Abstract Search & Export",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "forwardPorts": [
+    8765
+  ],
+  "portsAttributes": {
+    "8765": {
+      "label": "Abstract Search & Export (browser app)",
+      "onAutoForward": "notify",
+      "requireLocalPort": true
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "secrets": {
+    "ABSTRACT_VENDOR_ACCOUNT_ID": {
+      "description": "Your Abstract vendor account ID."
+    },
+    "ABSTRACT_EXPECT_TENANT": {
+      "description": "The same vendor account ID: commands refuse to run against any other tenant."
+    },
+    "ABSTRACT_API_KEY": {
+      "description": "An Abstract API key. Kept as an encrypted Codespaces secret; never written into the workspace."
+    }
+  },
+  "postCreateCommand": "sh -c 'cd search-export 2>/dev/null; cd app 2>/dev/null; python3 abstract_search.py --version'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.terminal.activateEnvironment": false
+      }
+    }
+  }
+}

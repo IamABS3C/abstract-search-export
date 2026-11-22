@@ -1,0 +1,17 @@
+# Only what the program reads at run time goes into the image.
+**/__pycache__
+**/*.pyc
+# every hidden file and folder
+.*
+**/.DS_Store
+tests
+tools
+docs/screenshots
+Dockerfile
+compose.yaml
+run-docker.sh
+run-docker.ps1
+Start-Mac.command
+Start-Windows.bat
+GUIDE.md
+README.md

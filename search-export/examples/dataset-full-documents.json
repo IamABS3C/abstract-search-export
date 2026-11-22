@@ -1,0 +1,10 @@
+{
+  "name": "dataset-full-documents",
+  "mode": "simple",
+  "dataset": "Okta",
+  "filters": [],
+  "time": {"last": "1h"},
+  "fields": ["@timestamp", "id"],
+  "full_documents": true,
+  "format": "ndjson.gz"
+}

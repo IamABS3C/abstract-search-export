@@ -1,0 +1,38 @@
+# Abstract Search & Export with Docker Compose.
+#
+#   docker compose up -d            start it (builds the image from this folder the first time)
+#   docker compose logs app         the link to open is printed here
+#   docker compose down             stop it
+#
+# Connect to your tenant in the page (the key stays in the app's memory), or pass these from your shell before
+# `docker compose up`. They are read from your environment, never written into this file, and kept by Docker in the
+# container's settings until `docker compose down`:
+#   ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_EXPECT_TENANT, ABSTRACT_API_KEY
+# To use an image you pulled instead of building one, set ABX_IMAGE to its name.
+name: abstract-search
+
+services:
+  app:
+    image: ${ABX_IMAGE:-abstract-search-export:local}
+    build:
+      context: .
+    container_name: abstract-search
+    user: "${ABX_UID:-10001}:${ABX_GID:-10001}"   # on Linux start with ABX_UID=$(id -u) ABX_GID=$(id -g) so the exports are yours
+    ports:
+      - "127.0.0.1:${ABX_PORT:-8765}:8765"        # this computer only: never publish it on the network
+    environment:
+      - ABSTRACT_VENDOR_ACCOUNT_ID
+      - ABSTRACT_EXPECT_TENANT
+      - ABSTRACT_API_KEY
+      - ABSTRACT_BASE_URL
+      - ABX_WEB_URL=http://127.0.0.1:${ABX_PORT:-8765}/
+    volumes:
+      - ${ABX_EXPORTS:-./AbstractExports}:/exports
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"

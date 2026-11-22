@@ -1,0 +1,9 @@
+{
+  "name": "cloud-audit-errors-kql",
+  "mode": "kql",
+  "kql": "events | where data_stream.dataset has \"cloudtrail\" and event.original has \"errorCode\" and event.outcome == \"failure\"",
+  "time": {"last": "24h"},
+  "fields": ["@timestamp", "id", "user_name", "action", "event.outcome", "source_ipv4", "data_stream.dataset"],
+  "full_documents": false,
+  "format": "ndjson.gz"
+}

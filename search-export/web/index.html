@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Abstract Search &amp; Export</title>
+<link rel="icon" href="/favicon.ico" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/rocket-a.css">
+<link rel="stylesheet" href="/static/launch.css">
+<script src="/static/app.js" defer></script>
+<script src="/static/workbench.js" defer></script>
+<script src="/static/rocket-a.js" defer></script>
+<script src="/static/launch.js" defer></script>
+</head>
+<body>
+<header id="bar">
+  <img class="logo" src="/static/logo-white.svg" alt="Abstract Security">
+  <span class="tname">Search &amp; Export</span>
+  <button class="tbtn ghost" id="b-side" type="button" aria-controls="side" aria-expanded="true">Hide search panel</button>
+  <span class="sp"></span>
+  <button id="launch-chip" type="button" hidden aria-label="Launch mode is on. Exit launch mode">Launch mode · <b>Exit</b></button>
+  <span class="kbd-hint" aria-hidden="true"><kbd>/</kbd> search <kbd id="kbd-mod">Ctrl</kbd>+<kbd>Enter</kbd> preview</span>
+  <div id="chips" aria-live="polite"></div>
+  <button class="tbtn" id="b-help" type="button">Help</button>
+  <button class="tbtn" id="b-disconnect" type="button" hidden>Disconnect</button>
+  <button class="tbtn primary" id="b-connect" type="button">Connect</button>
+</header>
+
+<div id="sysbanner" class="sysbanner" role="alert" hidden></div>
+
+<div id="app">
+  <div id="side-rail" hidden>
+    <button type="button" id="b-side-open" aria-controls="side" aria-expanded="false" title="Show the search panel">Search panel</button>
+  </div>
+  <aside id="side" aria-label="Build a search">
+    <!-- #mode stays as a hidden anchor for saved searches loaded from file. #qtabs picks how the search is written. -->
+    <div class="seg" id="mode" hidden><button data-v="simple" type="button" aria-pressed="true">Dataset + filters</button></div>
+    <div class="sgroup">
+      <div class="qtabs" id="qtabs" role="tablist" aria-label="How to write the search">
+        <button type="button" role="tab" id="qt-builder" data-q="builder" aria-selected="true" aria-controls="m-simple">Builder</button>
+        <button type="button" role="tab" id="qt-kql" data-q="kql" aria-selected="false" aria-controls="m-kql">KQL</button>
+        <button type="button" role="tab" id="qt-nl" data-q="nl" aria-selected="false" aria-controls="m-nl">Plain English</button>
+      </div>
+    </div>
+
+    <div id="m-nl" class="sgroup" role="tabpanel" aria-labelledby="qt-nl" hidden>
+      <label class="gl" for="nl-text">Describe what you are looking for</label>
+      <textarea id="nl-text" rows="4" spellcheck="true" placeholder="failed logins from outside the US in the last day"></textarea>
+      <div class="hint">Abstract's assistant writes the KQL. You see it, and how it would run, before anything searches.</div>
+      <div class="row"><button class="tbtn primary" id="nl-go" type="button">Write the query</button></div>
+      <div id="nl-out" aria-live="polite"></div>
+    </div>
+
+    <div id="m-kql" class="sgroup" role="tabpanel" aria-labelledby="qt-kql" hidden>
+      <label class="gl" for="kql-text">KQL <span class="gl-note">starts with events</span></label>
+      <div class="editor" id="kql-editor">
+        <div class="gutter" id="kql-gutter" aria-hidden="true">1</div>
+        <textarea id="kql-text" rows="7" spellcheck="false" autocomplete="off" autocapitalize="off"
+          aria-describedby="kql-badge kql-help" aria-autocomplete="list" aria-controls="kql-suggest"
+          placeholder='events | where data_stream.dataset =~ "okta" and action has "login"'></textarea>
+      </div>
+      <ul id="kql-suggest" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
+      <div id="kql-badge" class="runs" aria-live="polite"></div>
+      <div class="hint" id="kql-help">Tab accepts a suggestion. The badge says how it runs here: an exact export, KQL on Abstract, a result table, or not at all.</div>
+      <div class="row wrap">
+        <button class="lbtn" id="kql-tobuilder" type="button" hidden>Open in the builder</button>
+        <button class="lbtn" id="b-showkql" type="button">Write the builder's search here</button>
+      </div>
+    </div>
+
+    <div class="sgroup" id="imp-group">
+      <button class="lbtn" id="b-import" type="button">Use a search from Abstract…</button>
+      <div class="hint">A saved view, or a search copied from Abstract's search box, becomes the dataset and filters below.</div>
+    </div>
+
+    <div id="m-advanced" class="sgroup" hidden>
+      <div class="banner warn small" id="adv-msg"></div>
+      <button class="lbtn" id="b-newsearch" type="button">Start a new search</button>
+    </div>
+
+    <div id="m-simple" role="tabpanel" aria-labelledby="qt-builder">
+      <div class="sgroup">
+        <label class="gl" for="dataset">Dataset</label>
+        <input type="text" id="dataset" list="dl-datasets" placeholder="start typing a dataset name" autocomplete="off" aria-describedby="ds-hint">
+        <datalist id="dl-datasets"></datalist>
+        <div class="hint" id="ds-hint">The configuration name, for example your firewall or identity feed.</div>
+      </div>
+      <div class="sgroup">
+        <div class="gl" id="gl-filters">Filters <span class="gl-note" id="match-note">all must match</span></div>
+        <div id="filters" role="group" aria-labelledby="gl-filters"></div>
+        <button class="lbtn" id="b-addf" type="button">+ Add filter</button>
+        <div id="match-row" hidden>
+          <label class="f" for="match">With more than one filter</label>
+          <select id="match">
+            <option value="all">Every filter must match</option>
+            <option value="any">At least one filter must match</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="sgroup">
+      <label class="gl" for="time">Time range</label>
+      <select id="time" aria-describedby="time-hint"></select>
+      <div id="custom-time" hidden>
+        <div class="qdays" role="group" aria-label="Quick ranges (UTC)">
+          <button type="button" class="lbtn" data-q="today">Today</button><button type="button" class="lbtn" data-q="yesterday">Yesterday</button>
+          <button type="button" class="lbtn" data-q="7d">Last 7 days</button><button type="button" class="lbtn" data-q="30d">Last 30 days</button>
+          <button type="button" class="lbtn" data-q="month">Last month</button>
+        </div>
+        <label class="f" for="t-start-p">Start (UTC)</label>
+        <input type="datetime-local" id="t-start-p" step="1" aria-describedby="t-start-local">
+        <input type="text" id="t-start" placeholder="2026-09-28T00:00:00Z" autocomplete="off" aria-label="Start as text (UTC)">
+        <div class="hint" id="t-start-local"></div>
+        <label class="f" for="t-end-p">End (UTC)</label>
+        <input type="datetime-local" id="t-end-p" step="1" aria-describedby="t-end-local">
+        <input type="text" id="t-end" placeholder="2026-09-29T00:00:00Z" autocomplete="off" aria-label="End as text (UTC)">
+        <div class="hint" id="t-end-local"></div>
+      </div>
+      <div class="hint" id="time-hint">Relative ranges end 10 minutes ago, so late events settle.</div>
+      <label class="f" for="storage">Where to search</label>
+      <select id="storage" aria-describedby="storage-hint">
+        <option value="auto">Automatic (recommended)</option>
+        <option value="recent">Recent data only</option>
+      </select>
+      <div class="hint" id="storage-hint"></div>
+    </div>
+
+    <div class="sgroup">
+      <label class="gl" for="addfield">Fields to export</label>
+      <div id="fchips" aria-live="polite"></div>
+      <input type="text" id="addfield" list="dl-fields" placeholder="add a field and press Enter" autocomplete="off" aria-describedby="prof-hint">
+      <datalist id="dl-fields"></datalist>
+      <div class="hint" id="prof-hint"></div>
+      <div class="row" id="prof-actions" hidden>
+        <button class="lbtn" id="b-suggest" type="button">Use suggested fields</button>
+        <button class="lbtn" id="b-allseen" type="button" hidden>Use every learned field</button>
+        <button class="lbtn" id="b-reprof" type="button">Learn fields</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="fulldocs"> Every field of every event</label>
+    </div>
+
+    <div class="sgroup">
+      <label class="gl" for="saved">Saved searches</label>
+      <div class="row">
+        <select id="saved"><option value="">Choose a saved search</option></select>
+        <button class="lbtn" id="b-load" type="button">Load</button>
+      </div>
+      <div class="row">
+        <label class="sr-only" for="savename">Name for this search</label>
+        <input type="text" id="savename" placeholder="name this search" autocomplete="off">
+        <button class="lbtn" id="b-save" type="button">Save</button>
+      </div>
+      <button class="lbtn danger" id="b-del" type="button">Delete selected</button>
+      <div class="confirm" id="saved-confirm" role="alertdialog" aria-labelledby="saved-confirm-msg" hidden>
+        <div id="saved-confirm-msg"></div>
+        <div class="row">
+          <button class="lbtn solid" id="sc-yes" type="button">Replace</button>
+          <button class="lbtn" id="sc-no" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="actions">
+      <ul id="problems" class="problems" aria-live="polite" hidden></ul>
+      <div class="hint" id="action-note" aria-live="polite"></div>
+      <div class="btns">
+        <button class="tbtn" id="a-preview" type="button">Preview</button>
+        <button class="tbtn" id="a-validate" type="button">Validate</button>
+        <button class="tbtn primary" id="a-export" type="button" title="Open the Export tab to choose the format, then Start export">Export</button>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="notice" class="banner info" role="status" hidden>
+      <span id="notice-text"></span>
+      <button class="lbtn" id="notice-x" type="button" aria-label="Dismiss">Dismiss</button>
+    </div>
+    <div id="rhead">
+      <h1 id="title">Search</h1>
+      <div id="summary" class="mono"></div>
+    </div>
+    <nav id="rtabs" aria-label="Results">
+      <button data-t="start" type="button">Start</button>
+      <button data-t="preview" class="on" type="button" aria-current="page">Preview</button>
+      <button data-t="validate" type="button">Validate</button>
+      <button data-t="export" type="button">Export</button>
+      <button data-t="exports" type="button">Export history</button>
+      <button data-t="fields" type="button">Fields</button>
+      <button data-t="fieldsets" type="button">Fieldsets</button>
+      <button data-t="views" type="button">Saved views</button>
+      <button data-t="tenant" type="button">Tenant</button>
+      <button data-t="apicalls" type="button">API calls</button>
+      <button data-t="help" type="button">Help</button>
+    </nav>
+    <section id="rbody">
+      <div class="rview" id="v-start">
+        <p class="lede" data-tag="Flight plan">What do you want to do?</p>
+        <div class="tiles" id="start-tiles">
+          <button type="button" class="tile" data-go="find"><b>Find events</b><span>Pick a dataset and add filters with every operator Abstract offers.</span></button>
+          <button type="button" class="tile" data-go="nl"><b>Ask in plain English</b><span>Describe it; Abstract's assistant writes the KQL and you check it before it runs.</span></button>
+          <button type="button" class="tile" data-go="kql"><b>Write KQL</b><span>An editor with suggestions, field values and a live check of how it runs here.</span></button>
+          <button type="button" class="tile" data-go="export"><b>Export every match</b><span>Validate, then export recent data and the archive in full, resumable.</span></button>
+          <button type="button" class="tile" data-go="fieldsets"><b>Build a fieldset</b><span>Choose columns from what a dataset actually fills, and save them to Abstract.</span></button>
+          <button type="button" class="tile" data-go="views"><b>Manage saved views</b><span>Open, save, update and delete views in Abstract, with a review before each change.</span></button>
+          <button type="button" class="tile" data-go="import"><b>Use a search from Abstract</b><span>Paste a search or pick a saved view; it becomes a search you can export.</span></button>
+        </div>
+        <p class="hint">Every call to Abstract's API shows in the live strip below, with the key masked. Nothing changes in Abstract without a review and your confirm.</p>
+      </div>
+      <div class="rview on" id="v-preview"><div class="empty">This tool is a companion to Abstract's search: use it to validate a search and export large results in full, straight to this computer.<br>Build a search on the left, then choose <b>Preview</b>. Preview shows up to 50 events: a sample, not the export.</div></div>
+      <div class="rview" id="v-validate"><div class="empty">Validate runs every check an export runs: field names, proof that each filter is applied, an independent cross-check of the count, and the export plan. It exports nothing. Export is available once the current search has passed.</div></div>
+      <div class="rview" id="v-export">
+        <div class="card">
+          <h3 data-tag="Payload delivery">Export all results</h3>
+          <div class="opts">
+            <div class="f" id="fmt-l">Format</div>
+            <div class="seg sm" id="fmt" role="group" aria-labelledby="fmt-l">
+              <button data-v="ndjson.gz" type="button" aria-pressed="true">NDJSON.gz</button>
+              <button data-v="ndjson" type="button" aria-pressed="false">NDJSON</button>
+              <button data-v="csv" type="button" aria-pressed="false">CSV</button>
+            </div>
+            <label class="chk"><input type="checkbox" id="merge" checked aria-describedby="merge-hint"> Combine into one file when complete</label>
+            <div class="hint" id="merge-hint">Download in the browser needs the combined file. Without it, the parts stay in the export folder, and Open folder shows them.</div>
+            <div class="hint" id="export-dest"></div>
+          </div>
+          <div class="hint" id="gate-note" aria-live="polite"></div>
+          <div class="row gap">
+            <button class="tbtn primary" id="a-export2" type="button">Start export</button>
+            <button class="tbtn danger" id="a-stop" type="button" hidden>Stop</button>
+          </div>
+        </div>
+
+        <div class="card" id="automate">
+          <h3 data-tag="Recurring flight">Run it on a schedule</h3>
+          <p class="hint">The same search as a scheduled job: the command line, or a ready job for your scheduler with the key read from a secret store, a check that it runs against the right tenant, and an alert when it fails. It runs exactly what is set here.</p>
+          <div class="row gap wrap"><button class="tbtn" id="a-cmd" type="button">Copy as command line</button></div>
+          <pre id="cmd-out" class="mono" tabindex="0" hidden></pre>
+          <div class="hint" id="cmd-note"></div>
+          <div class="grid2 au-opts">
+            <div><label class="f" for="au-target">Where it runs</label>
+              <select id="au-target">
+                <option value="cron">Linux or macOS: cron</option>
+                <option value="launchd">macOS: launchd</option>
+                <option value="systemd">Linux: systemd timer</option>
+                <option value="windows-task">Windows: Task Scheduler</option>
+                <option value="github-actions">GitHub Actions</option>
+                <option value="container-cron">Docker or Kubernetes CronJob</option>
+              </select></div>
+            <div><label class="f" for="au-when">How often</label>
+              <select id="au-when">
+                <option value="1d">Every day, for the day before</option>
+                <option value="6h">Every 6 hours</option>
+                <option value="1h">Every hour</option>
+                <option value="15m">Every 15 minutes</option>
+              </select></div>
+          </div>
+          <div class="grid2">
+            <div><label class="f" for="au-at">At (UTC)</label>
+              <input type="text" id="au-at" value="00:20" autocomplete="off" inputmode="numeric" aria-describedby="au-at-hint">
+              <div class="hint" id="au-at-hint">Minute past the hour for hourly runs; the time of day for daily ones.</div></div>
+            <div><label class="f" for="au-job">Job name (optional)</label>
+              <input type="text" id="au-job" autocomplete="off" placeholder="from the search name"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="au-save"> Also write these files to a folder in the exports folder</label>
+          <div class="hint">Failures go to the run's log. To be told, set <span class="mono">ABX_ALERT_WEBHOOK</span> in the job's environment or secret store; failures are posted there as JSON. Never paste the URL here.</div>
+          <div class="row gap"><button class="tbtn primary" id="au-go" type="button">Generate the job</button></div>
+          <div id="au-out" aria-live="polite"></div>
+        </div>
+
+        <div class="card" id="job" hidden>
+          <div class="jhead">
+            <span class="spin" id="j-spin" aria-hidden="true"></span>
+            <b id="j-stage">Starting</b>
+            <span class="sp"></span>
+            <span class="mono muted" id="j-elapsed"></span>
+          </div>
+          <div class="bar" id="j-bar" role="progressbar" aria-labelledby="j-stage" aria-valuemin="0" aria-valuemax="100"><i id="j-fill"></i></div>
+          <div class="jstats">
+            <div><b id="j-rows">0</b><span id="j-rows-l">events written</span></div>
+            <div><b id="j-slices">0 / ?</b><span>slices complete</span></div>
+            <div><b id="j-pct">…</b><span>done</span></div>
+            <div><b id="j-eta">…</b><span>time left (estimate)</span></div>
+          </div>
+          <div id="j-result"></div>
+          <div class="f" id="j-log-l">Technical log</div>
+          <div class="console" id="j-log" tabindex="0" aria-labelledby="j-log-l"></div>
+        </div>
+      </div>
+      <div class="rview" id="v-exports"><div id="exports-out"></div></div>
+      <div class="rview" id="v-fields">
+        <div class="card" id="learnall">
+          <h3>Fields of every dataset</h3>
+          <p class="hint">Learn which fields each dataset on this tenant uses, with how often each is filled. It samples recent events from every dataset (about 10–30 seconds each). The result is kept in memory for this session only; nothing is written to disk.</p>
+          <div class="row gap"><button class="tbtn" id="b-learnall" type="button">Learn fields for every dataset</button><button class="tbtn danger" id="b-learnstop" type="button" hidden>Stop</button></div>
+          <div class="hint" id="learnall-status" aria-live="polite"></div>
+          <div id="learnall-out"></div>
+        </div>
+        <div class="row wrap">
+          <label class="sr-only" for="fsearch">Search fields</label>
+          <input type="text" id="fsearch" placeholder="search fields" autocomplete="off">
+          <label class="chk nowrap"><input type="checkbox" id="fall"> all tenant fields</label>
+        </div>
+        <div class="hint" id="fcount"></div>
+        <div id="fgrid"></div>
+      </div>
+      <div class="rview" id="v-fieldsets">
+        <div class="cols2">
+          <div class="card" id="fs-list-card">
+            <div class="cardhead"><h3 data-tag="Instrument panel">Fieldsets in Abstract</h3><span class="sp"></span><button class="tbtn" id="fs-reload" type="button">Refresh</button><button class="tbtn" id="fs-new" type="button">New fieldset</button></div>
+            <p class="hint">A fieldset is a named list of columns that saved views use. Read live from your tenant. To back them up or copy them to another tenant, use <button class="linkish" type="button" data-go-cc>Content as code</button> in Saved views.</p>
+            <div id="fs-list" aria-live="polite"></div>
+          </div>
+          <div class="card" id="fs-builder">
+            <div class="cardhead"><h3 id="fs-title">New fieldset</h3></div>
+            <label class="f" for="fs-name">Name</label><input type="text" id="fs-name" autocomplete="off" placeholder="for example Firewall triage">
+            <label class="f" for="fs-desc">Description (optional)</label><input type="text" id="fs-desc" autocomplete="off">
+            <label class="f" for="fs-share">Who can use it</label>
+            <select id="fs-share"><option value="private">Only me (private)</option><option value="public">Everyone on this tenant (public)</option></select>
+            <label class="f" for="fs-ds">Start from a dataset (optional)</label>
+            <div class="row"><input type="text" id="fs-ds" list="dl-datasets" autocomplete="off" placeholder="a dataset name"><button class="tbtn" id="fs-profile" type="button">Learn its fields</button></div>
+            <div class="hint" id="fs-ds-hint">Samples recent events (10 to 30 seconds) and shows how often each field is filled.</div>
+            <div id="fs-pool"></div>
+            <label class="f" for="fs-add">Add a field by name</label>
+            <div class="row"><input type="text" id="fs-add" list="dl-fields" autocomplete="off" placeholder="user_name, ext.role …"><button class="tbtn" id="fs-add-b" type="button">Add</button></div>
+            <div class="hint" id="fs-add-hint">Stored fields only: your tenant's fields, ext.* and event.parsed.*. A column computed by KQL cannot go in a fieldset.</div>
+            <div class="f" id="fs-sel-l">Columns, in order</div>
+            <ol id="fs-sel" class="sel" aria-labelledby="fs-sel-l" aria-describedby="fs-sel-hint"></ol>
+            <div class="hint" id="fs-sel-hint">Drag to reorder, or focus a column and press Alt with the up or down arrow.</div>
+            <div class="row gap wrap">
+              <button class="tbtn primary" id="fs-save" type="button">Review and save to Abstract</button>
+              <button class="tbtn" id="fs-useexport" type="button">Use as export fields</button>
+              <button class="tbtn" id="fs-clear" type="button">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rview" id="v-views">
+        <div class="card">
+          <div class="cardhead"><h3 data-tag="Saved trajectory">Save the current search as a view</h3></div>
+          <p class="hint">Saves the search on the left, its time range and its columns as a saved view in Abstract. You review the exact change first.</p>
+          <div class="grid2">
+            <div><label class="f" for="vw-name">View name</label><input type="text" id="vw-name" autocomplete="off" placeholder="for example Failed logins, last day"></div>
+            <div><label class="f" for="vw-fs">Columns</label><select id="vw-fs"><option value="">The export fields of this search</option></select></div>
+          </div>
+          <div class="row gap"><button class="tbtn primary" id="vw-save" type="button">Review and save to Abstract</button></div>
+        </div>
+        <div class="card">
+          <div class="cardhead"><h3 data-tag="Flight log">Saved views in Abstract</h3><span class="sp"></span><button class="tbtn" id="vw-reload" type="button">Refresh</button></div>
+          <label class="sr-only" for="vw-filter">Filter views</label><input type="text" id="vw-filter" autocomplete="off" placeholder="filter by name">
+          <div id="vw-list" aria-live="polite"></div>
+        </div>
+        <div class="card" id="cc">
+          <div class="cardhead"><h3 data-tag="Cargo manifest">Content as code</h3></div>
+          <p class="hint">Saved views and fieldsets as JSON files: back them up, keep them in git, see what changed, restore them, or copy them to another tenant. Exporting only reads. Loading a bundle shows every difference first; nothing changes in Abstract until you review and confirm.</p>
+          <div class="cols2">
+            <div>
+              <div class="f" id="cc-ex-l">Export from this tenant</div>
+              <div class="seg sm" id="cc-what" role="group" aria-labelledby="cc-ex-l">
+                <button type="button" data-v="all" aria-pressed="true">Views and fieldsets</button>
+                <button type="button" data-v="views" aria-pressed="false">Views only</button>
+                <button type="button" data-v="fieldsets" aria-pressed="false">Fieldsets only</button>
+              </div>
+              <label class="f" for="cc-names">Only these (optional)</label>
+              <input type="text" id="cc-names" autocomplete="off" placeholder="names, comma-separated; empty = all">
+              <div class="row gap"><button class="tbtn primary" id="cc-export" type="button">Export bundle</button></div>
+              <div id="cc-ex-out" aria-live="polite"></div>
+            </div>
+            <div>
+              <div class="f">Load a bundle into this tenant</div>
+              <input type="file" id="cc-file" accept=".json,application/json" class="sr-only">
+              <label class="drop" for="cc-file" id="cc-drop"><b>Choose a bundle file</b><span>or drop it here (the JSON Export bundle saves)</span></label>
+              <label class="chk"><input type="checkbox" id="cc-prune" aria-describedby="cc-prune-hint"> Also delete items that are not in the bundle</label>
+              <div class="hint warn" id="cc-prune-hint">Off by default. With it on, views or fieldsets on this tenant that the bundle does not have are deleted for everyone, but only for a kind the bundle holds in full: a bundle of views only never deletes a fieldset. The review lists every delete first.</div>
+              <div class="row gap"><button class="tbtn" id="cc-diff" type="button" disabled>Compare with this tenant</button><button class="tbtn primary" id="cc-plan" type="button" disabled>Review the changes</button></div>
+              <div id="cc-diff-out" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rview" id="v-tenant">
+        <div class="card">
+          <h3 data-tag="Ground systems">What this tenant supports</h3>
+          <p class="hint">Checked live on your tenant when you connect, by running small read-only searches. Nothing is stored.</p>
+          <div id="caps-out" aria-live="polite"></div>
+          <div class="row gap"><button class="tbtn" id="b-caps" type="button">Check again</button></div>
+        </div>
+        <div class="card">
+          <div class="cardhead"><h3 data-tag="Ground links">Platform endpoints</h3><span class="sp"></span><button class="tbtn" id="b-endpoints" type="button">Refresh</button></div>
+          <p class="hint">Every Abstract API endpoint this tool can use, whether it needs it, and what this session saw. Optional ones turn their feature off on a tenant that does not have them.</p>
+          <div id="ep-out" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="rview" id="v-apicalls">
+        <div class="card">
+          <h3 data-tag="Telemetry">API calls</h3>
+          <p class="hint">Every call this app makes to Abstract's API, newest first: connecting, lists, fields, preview, validate and exports. Each shows the headers it sent and the request. Your API key appears only as ******** and is never stored here; the events that come back are not kept. The same calls stream live under every tab.</p>
+          <div class="row gap wrap">
+            <label class="f" for="ac-shell">Copy as curl for</label>
+            <select id="ac-shell">
+              <option value="sh">macOS / Linux terminal</option>
+              <option value="ps">Windows PowerShell</option>
+              <option value="cmd">Windows Command Prompt</option>
+            </select>
+            <button class="tbtn" id="ac-clear" type="button">Clear this list</button>
+          </div>
+          <div class="hint" id="ac-log"></div>
+          <div id="ac-out" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="rview" id="v-help">
+        <div id="help-wrap"><nav id="help-nav" aria-label="Help topics"></nav><article id="help-body" class="md"></article></div>
+      </div>
+    </section>
+    <div id="livefeed">
+      <div class="lf-head">
+        <b>Live API calls</b><span class="mono muted" id="lf-note"></span><span class="sp"></span>
+        <button class="lbtn" id="lf-all" type="button">All calls</button>
+        <button class="lbtn" id="lf-toggle" type="button" aria-expanded="true" aria-controls="lf-list">Hide</button>
+      </div>
+      <div id="lf-list" class="console" role="log" aria-label="Live API calls"></div>
+    </div>
+  </main>
+</div>
+
+<div id="modal" class="overlay" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="c-title">
+    <h2 id="c-title">Connect to your tenant</h2>
+    <p class="muted">The key is sent once to the app running on this computer and kept in its memory for this session only. It is never saved to disk, in the browser, or shown again.</p>
+    <p class="hint">To keep the key out of the browser entirely, start the app with the key already in its environment: <span class="mono">ABSTRACT_API_KEY</span>, or <span class="mono">ABSTRACT_API_KEY_COMMAND</span> to read it from your secret manager or keychain. It then connects on its own.</p>
+    <label class="f" for="c-base">API URL</label><input type="text" id="c-base" autocomplete="off">
+    <label class="f" for="c-va">Vendor account ID</label><input type="text" id="c-va" placeholder="for example AbC123xYz0" autocomplete="off">
+    <label class="f" for="c-key">API key</label><input type="password" id="c-key" autocomplete="off">
+    <div class="err" id="c-err" role="alert"></div>
+    <div class="row gap end">
+      <button class="tbtn" id="c-cancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="c-go" type="button">Connect</button>
+    </div>
+  </div>
+</div>
+
+<div id="imp" class="overlay" hidden>
+  <div class="dlg dlg-wide" role="dialog" aria-modal="true" aria-labelledby="i-title">
+    <h2 id="i-title">Use a search from Abstract</h2>
+    <p class="muted">Pick one of this tenant's saved views, or paste the search from Abstract's search box. It is converted into a dataset, filters and a time range, and shown to you before anything runs. Saved views are read live from your tenant and never stored.</p>
+    <label class="f" for="i-view">Saved view</label>
+    <div class="row gap"><select id="i-view"><option value="">Choose Load views first</option></select><button class="tbtn" id="i-load" type="button">Load views</button><button class="tbtn" id="i-checkall" type="button" hidden>Check every view</button><button class="tbtn" id="i-sync" type="button" hidden>Save all as saved searches</button></div>
+    <div class="hint" id="i-vcount" aria-live="polite"></div>
+    <div id="i-checks"></div>
+    <label class="f" for="i-text">Or paste a search</label>
+    <textarea id="i-text" rows="5" spellcheck="false" placeholder='e.g. events | where [&apos;data_stream.dataset&apos;] == "Okta" and action == "user.session.start"'></textarea>
+    <div id="i-out" aria-live="polite"></div>
+    <div class="err" id="i-err" role="alert"></div>
+    <div class="row gap end">
+      <button class="tbtn" id="i-cancel" type="button">Cancel</button>
+      <button class="tbtn" id="i-convert" type="button">Convert</button>
+      <button class="tbtn primary" id="i-use" type="button" disabled>Use this search</button>
+    </div>
+  </div>
+</div>
+
+<div id="locked" class="overlay" hidden>
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="l-title" aria-describedby="l-msg">
+    <h2 id="l-title">Open the link from the terminal</h2>
+    <p id="l-msg"></p>
+    <p class="muted" id="l-how">The link printed in the terminal works once. To get a new one, press <b>Enter</b> in the terminal window running the app. If the app is not running, start it with <span class="mono">python3 abstract_search.py --web</span>.</p>
+  </div>
+</div>
+
+<div id="review" class="overlay" hidden>
+  <div class="dlg dlg-wide" role="dialog" aria-modal="true" aria-labelledby="rv-title" aria-describedby="rv-lede">
+    <h2 id="rv-title">Review the change</h2>
+    <p class="muted" id="rv-lede">Nothing has changed in Abstract yet. Read what will happen, then confirm.</p>
+    <div class="mono rv-req" id="rv-req"></div>
+    <div id="rv-body"></div>
+    <details class="call" id="rv-raw-d"><summary>Request body</summary><pre class="console" id="rv-raw"></pre></details>
+    <div class="err" id="rv-err" role="alert"></div>
+    <div class="row gap end">
+      <button class="tbtn" id="rv-cancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="rv-go" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="cc-review" class="overlay" hidden>
+  <div class="dlg dlg-wide" role="dialog" aria-modal="true" aria-labelledby="cr-title" aria-describedby="cr-lede">
+    <h2 id="cr-title">Review the bundle</h2>
+    <p class="muted" id="cr-lede">Nothing has changed in Abstract yet. These are the exact changes, in the order they would be made.</p>
+    <div id="cr-body"></div>
+    <div class="err" id="cr-err" role="alert"></div>
+    <div class="row gap end">
+      <button class="tbtn" id="cr-cancel" type="button">Cancel</button>
+      <button class="tbtn primary" id="cr-go" type="button">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="live" class="sr-only" aria-live="polite"></div>
+</body>
+</html>

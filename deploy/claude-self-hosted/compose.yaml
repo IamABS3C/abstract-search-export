@@ -1,0 +1,45 @@
+# One runner for a self-hosted Claude environment, serving one session at a time.
+#
+#   (umask 077 && cat > environment-secret)     paste the environment secret from claude.ai, then Ctrl-D
+#   (umask 077 && cat > abstract-api-key)       paste the Abstract API key, then Ctrl-D
+#   export ABSTRACT_VENDOR_ACCOUNT_ID=your-vendor-account-id
+#   export CLAUDE_CODE_VERSION="$(curl -fsSL https://downloads.claude.ai/claude-code-releases/stable)"
+#   docker compose up -d --build
+#
+# Both files stay on this machine and are mounted read-only as secrets. Neither is in an environment variable, in the
+# image or in the repository (.gitignore lists them). On an Arm machine, change linux-x64 in the Dockerfile.
+name: claude-runner-abstract
+
+services:
+  runner:
+    build:
+      context: .
+      args:
+        CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:?set CLAUDE_CODE_VERSION, see the top of this file}
+    command:
+      - self-hosted-runner
+      - --environment-secret-file
+      - /run/secrets/environment-secret
+      - --capacity
+      - "1"
+      - --base-dir
+      - /workspace
+    environment:
+      ABSTRACT_VENDOR_ACCOUNT_ID: ${ABSTRACT_VENDOR_ACCOUNT_ID:?set ABSTRACT_VENDOR_ACCOUNT_ID}
+      ABSTRACT_EXPECT_TENANT: ${ABSTRACT_VENDOR_ACCOUNT_ID}
+      ABSTRACT_API_KEY_FILE: /run/secrets/abstract-api-key
+    secrets:
+      - environment-secret
+      - abstract-api-key
+    volumes:
+      - workspace:/workspace
+    restart: unless-stopped
+
+secrets:
+  environment-secret:
+    file: ./environment-secret
+  abstract-api-key:
+    file: ./abstract-api-key
+
+volumes:
+  workspace:

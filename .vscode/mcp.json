@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "abstract-search": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["${workspaceFolder}/search-export/abstract_search.py", "mcp"],
+      "env": {
+        "ABSTRACT_VENDOR_ACCOUNT_ID": "${env:ABSTRACT_VENDOR_ACCOUNT_ID}",
+        "ABSTRACT_EXPECT_TENANT": "${env:ABSTRACT_EXPECT_TENANT}",
+        "ABSTRACT_API_KEY_COMMAND": "${env:ABSTRACT_API_KEY_COMMAND}",
+        "ABSTRACT_API_KEY": "${env:ABSTRACT_API_KEY}"
+      }
+    }
+  }
+}
