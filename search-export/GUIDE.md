@@ -21,7 +21,7 @@ Every capability, and where to find it in each of the four ways to use the tool.
 | What you can do | Browser app | Guided terminal | Command line | AI assistant (MCP) | Read |
 |---|---|---|---|---|---|
 | Start: pick what you want to do | **Start** | Guided search & export | – | – | [Read](#step-b2-connect-and-check-the-tenant) |
-| Connect and check which tenant the key belongs to | Connect to your tenant, **Tenant** | Connect / switch tenant, What this tenant supports | `capabilities` | `status`, `capabilities` | [Read](#step-b2-connect-and-check-the-tenant) |
+| Connect and check which tenant the key belongs to | Connect to your tenant, **Tenant** | Connect / switch tenant, What this tenant supports | `status`, `capabilities` | `status`, `capabilities` | [Read](#step-b2-connect-and-check-the-tenant) |
 | Find datasets and the fields they fill | **Fields** | Browse fields of a dataset or of the tenant, Learn the fields of every dataset, List every dataset | `datasets`, `fields` | `datasets`, `fields`, `field_values` | [Read](#step-c2-find-your-dataset) |
 | Build a search with filters, every operator | **Builder** | Guided search & export, Build or edit the search | `preview` | `preview` | [Read](#step-b3-pick-the-data) |
 | Write KQL, checked against your tenant before it runs | **KQL** | Write or paste a KQL query | `kql` | `kql_check`, `kql_preview`, `kql_save` | [Read](#other-ways-to-write-the-search) |
@@ -298,14 +298,13 @@ The command line runs the same search and the same checks as the browser app, wi
 
 ### Step C1: Give the tool your credentials (each terminal window)
 
-In a terminal in the app folder (step B1), set three values. You type the key without it being shown, and it is never saved to a file.
+In a terminal in the app folder (step B1), set two values. You type the key without it being shown, and it is never saved to a file.
 
 **Mac and Linux:**
 
 ```bash
 printf 'API key: '; read -rs ABSTRACT_API_KEY; echo; export ABSTRACT_API_KEY
 export ABSTRACT_VENDOR_ACCOUNT_ID=AbC123xYz0
-export ABSTRACT_EXPECT_TENANT=AbC123xYz0
 ```
 
 **Windows (PowerShell):**
@@ -313,16 +312,18 @@ export ABSTRACT_EXPECT_TENANT=AbC123xYz0
 ```powershell
 $env:ABSTRACT_API_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'API key')).Password
 $env:ABSTRACT_VENDOR_ACCOUNT_ID = "AbC123xYz0"
-$env:ABSTRACT_EXPECT_TENANT = "AbC123xYz0"
 ```
 
-Replace `AbC123xYz0` with your vendor account ID in both lines. `ABSTRACT_EXPECT_TENANT` is a safety check: the tool refuses to run if the key belongs to a different tenant. These values last until you close the terminal window.
+Replace `AbC123xYz0` with your vendor account ID. When the tool connects, Abstract checks the key against this ID and refuses a key that belongs to another vendor account. These values last until you close the terminal window. Instead of typing the key, you can set `ABSTRACT_API_KEY_COMMAND` to a command that prints it from your password manager or keychain, for example `op read "op://Security/Abstract API/credential"` for 1Password or `security find-generic-password -s abstract-api -a api-key -w` for the macOS keychain.
+
+Optional: to pin one tenant, for a scheduled job, also set `ABSTRACT_EXPECT_TENANT` to the same ID. Every command then refuses to run when the key belongs to another tenant.
 
 ### Step C2: Find your dataset
 
 **Mac and Linux:**
 
 ```bash
+python3 abstract_search.py status
 python3 abstract_search.py capabilities
 python3 abstract_search.py datasets
 python3 abstract_search.py fields --dataset "Palo Alto Firewall"
@@ -331,12 +332,15 @@ python3 abstract_search.py fields --dataset "Palo Alto Firewall"
 **Windows:**
 
 ```powershell
+py abstract_search.py status
 py abstract_search.py capabilities
 py abstract_search.py datasets
 py abstract_search.py fields --dataset "Palo Alto Firewall"
 ```
 
-`capabilities` shows that you are connected and what your tenant and key support, including the archive. `datasets` lists every dataset; copy the exact name of the one you want. `fields` lists every field that dataset uses, ACS and `ext`, with how often each has a value.
+`status` shows which tenant you are connected to, the API address and where the key comes from, never the key itself. Every command that connects also prints one line first, such as `Connected to Example Corp (AbC123xYz0) · production`, so you always know which tenant it is working on; `--quiet` hides it. `capabilities` shows what your tenant and key support, including the archive. `datasets` lists every dataset; copy the exact name of the one you want. `fields` lists every field that dataset uses, ACS and `ext`, with how often each has a value.
+
+![status: which tenant, and where the key comes from](docs/screenshots/cli-status.png)
 
 ![capabilities: what this tenant and key support](docs/screenshots/cli-capabilities.png)
 
@@ -519,7 +523,7 @@ Press **m** for the menu and **q** to quit. To start, you can also choose **Desc
 
 ```json
 {"command": "python3", "args": ["/path/to/app/abstract_search.py", "mcp"],
- "env": {"ABSTRACT_VENDOR_ACCOUNT_ID": "AbC123xYz0", "ABSTRACT_EXPECT_TENANT": "AbC123xYz0",
+ "env": {"ABSTRACT_VENDOR_ACCOUNT_ID": "AbC123xYz0",
          "ABSTRACT_API_KEY_COMMAND": "op read \"op://Security/Abstract API/credential\""}}
 ```
 
@@ -547,7 +551,7 @@ The app in the container can be reached from this computer only, runs without pr
 The kit includes a hidden `.devcontainer` folder (Python 3.12, nothing else installed, port 8765 forwarded for the browser app), for VS Code dev containers and GitHub Codespaces.
 
 - **On your own machine:** open the kit folder in VS Code and choose **Reopen in Container**. Give it the key through `ABSTRACT_API_KEY_COMMAND` or type it when asked.
-- **GitHub Codespaces:** put the kit in a private repository and add `ABSTRACT_API_KEY`, `ABSTRACT_VENDOR_ACCOUNT_ID` and `ABSTRACT_EXPECT_TENANT` as Codespaces secrets for it. Never put a key in `devcontainer.json`, a `.env` file or the repository.
+- **GitHub Codespaces:** put the kit in a private repository and add `ABSTRACT_API_KEY` and `ABSTRACT_VENDOR_ACCOUNT_ID` as Codespaces secrets for it (and `ABSTRACT_EXPECT_TENANT` if you want to pin the tenant). Never put a key in `devcontainer.json`, a `.env` file or the repository.
 
 Then, in the container's terminal, in the `app` folder, run `python3 abstract_search.py --menu` for the guided terminal, or `python3 abstract_search.py --web --port 8765 --no-browser` for the browser app (open it from VS Code desktop, which forwards the port to your computer).
 
@@ -594,7 +598,7 @@ You need no settings to get started. Use these only when you need them.
 | `ABSTRACT_API_KEY` | Your API key (step C1). | |
 | `ABSTRACT_API_KEY_COMMAND` | A command that prints your API key from a password manager or key vault. | `op read "op://Security/Abstract API/credential"` |
 | `ABSTRACT_API_KEY_FILE` | A file that holds your API key on one line, where a server mounts secrets as files. | `/run/secrets/abstract_api_key` |
-| `ABSTRACT_EXPECT_TENANT` | Refuse to run against any other tenant. Needed for the command line. | `AbC123xYz0` |
+| `ABSTRACT_EXPECT_TENANT` | Optional. Pins one tenant, for scheduled jobs: every command refuses to run when the key belongs to another. | `AbC123xYz0` |
 | `ABSTRACT_BASE_URL` | Only if Abstract gave you a different API address. | `https://api.abstractsecurity.app` |
 | `ABX_OUT_ROOT` | Save exports somewhere other than `AbstractExports` in your home folder. | `~/Evidence` or `D:\Evidence` |
 | `HTTPS_PROXY` | Your company's web proxy. | `http://proxy.example.com:8080` |
@@ -610,7 +614,7 @@ To set one for the current terminal window: `export ABX_OUT_ROOT=~/Evidence` on 
 | `python3: command not found` (Mac, Linux) | Install Python (step S1). |
 | `py` is not recognized (Windows) | Install Python from python.org with **Add python.exe to PATH** ticked, then open a new PowerShell window. |
 | Your API key was rejected | The key is wrong or has expired. Ask for a new one. |
-| `TENANT MISMATCH` | The key belongs to another tenant. Use the right key, or set `ABSTRACT_EXPECT_TENANT` to the vendor account ID you mean. |
+| `TENANT MISMATCH` | The key belongs to another tenant than `ABSTRACT_EXPECT_TENANT` names. Use the right key, or correct `ABSTRACT_EXPECT_TENANT`. |
 | Could not reach the API | Check your internet connection or VPN. On a company network, set `HTTPS_PROXY`. |
 | The TLS certificate could not be verified | On a company network, set `SSL_CERT_FILE`. On a Mac with Python from python.org, run **Install Certificates.command** in the Python folder in Applications. |
 | No dataset called … | Use the full name, exactly as `datasets` lists it. |

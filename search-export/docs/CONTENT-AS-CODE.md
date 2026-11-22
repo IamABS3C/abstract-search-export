@@ -77,7 +77,7 @@ Applying is one review for the whole bundle, then one confirm. Export a backup b
 
 Every change is written to `logs/changes-YYYY-MM-DD.log`.
 
-To copy between tenants, export while connected to the first tenant, then connect to the second (its own `ABSTRACT_VENDOR_ACCOUNT_ID`, key and `ABSTRACT_EXPECT_TENANT`) and apply the same folder.
+To copy between tenants, export while connected to the first tenant, then connect to the second (its own `ABSTRACT_VENDOR_ACCOUNT_ID` and key, and its own `ABSTRACT_EXPECT_TENANT` if you set one) and apply the same folder.
 
 ## Prune: delete what is not in the bundle
 

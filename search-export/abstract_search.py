@@ -8,6 +8,7 @@ Start here
   python3 abstract_search.py --web        the browser app  [--port N] [--no-browser] [--bind ADDR, containers]
 
 Commands (the same steps as the browser app; add --json for machine-readable output)
+  status                                  which tenant this computer connects to, and where the key comes from
   capabilities                            what this tenant supports: KQL, archive, complete events
   datasets                                every dataset, with 24-hour volume
   views                                   every saved view in Abstract, and how it runs here
@@ -55,8 +56,10 @@ Seeing what it does
   python3 abstract_search.py export --help   every export option
   python3 abstract_search.py --version       the version and build details
 
-Before a command: set ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_EXPECT_TENANT and the key: ABSTRACT_API_KEY, or
-ABSTRACT_API_KEY_COMMAND to read it from a secret manager or keychain when needed (see Start-Here-Guide.html, Part 3).
+Before a command: set ABSTRACT_VENDOR_ACCOUNT_ID and the key, one of ABSTRACT_API_KEY_COMMAND (read it from 1Password,
+a keychain or a vault when needed, e.g. op read "op://Security/Abstract API/credential"), ABSTRACT_API_KEY_FILE or
+ABSTRACT_API_KEY. Every command that connects prints "Connected to <tenant>" first. ABSTRACT_EXPECT_TENANT is optional:
+set it to pin a scheduled job to one tenant (see Start-Here-Guide.html, Part 3).
 Terminal: NO_COLOR=1 turns colour off; ABX_PLAIN=1 gives plain numbered prompts (screen-reader friendly).
 Needs Python 3.8 or newer. Nothing to install. Start-Here-Guide.html, next to the app folder, explains everything.
 """
@@ -116,8 +119,17 @@ def _port(argv):
     return port
 
 
+def drop_unfilled_settings(environ=os.environ):
+    """An AI client's config can pass a setting the person left empty as the literal text ${...} instead of nothing
+    (an optional field of a desktop extension, an unexpanded variable). A key or tenant spelled ${user_config.api_key}
+    is never meant, so such ABSTRACT_* values are treated as not set."""
+    for k in [k for k, v in environ.items() if k.startswith("ABSTRACT_") and re.fullmatch(r"\$\{[^}]*\}", v.strip())]:
+        del environ[k]
+
+
 def main(argv=None):
     """The command line. A fault in the tool itself is written to the log with its details, never a bare traceback."""
+    drop_unfilled_settings()
     try:
         return _main(argv)
     except (KeyboardInterrupt, SystemExit):
@@ -181,8 +193,8 @@ def _main(argv=None):
             sys.stdout.isatty() and "--quiet" not in argv and "--json" not in argv and \
             not ({"-h", "--help"} & set(argv)):
         _brand_header(argv[0])
-    if argv[:1] in (["fields"], ["datasets"], ["views"], ["searches"], ["capabilities"], ["exports"]) and \
-            {"-h", "--help"} & set(argv):
+    if argv[:1] in (["fields"], ["datasets"], ["views"], ["searches"], ["capabilities"], ["exports"], ["status"]) \
+            and {"-h", "--help"} & set(argv):
         print(HELP)
         return 0
     if argv[:1] == ["kql"]:
@@ -225,6 +237,8 @@ def _main(argv=None):
         return exports_cmd(argv[1:])
     if argv[:1] == ["searches"]:
         return searches_cmd(argv[1:])
+    if argv[:1] == ["status"]:
+        return status_cmd(argv[1:])
     if argv[:1] == ["export"] and _flag_value(argv, "--from-saved") is not None:
         try:
             argv = from_saved_argv(argv)
@@ -405,14 +419,22 @@ def _connect(args):
               "Start-Here-Guide.html, Part 3)", file=sys.stderr)
         return 2
     name, vid = S(s.tenant["name"]), S(s.tenant["vendor_account_id"])
-    if not expect:
-        print(f"STOPPED: connected as {name} ({vid}). Set ABSTRACT_EXPECT_TENANT={vid} (or pass --expect-tenant "
-              f"{vid}) so nothing can ever run against the wrong tenant.", file=sys.stderr)
-        return 2
-    if expect != s.tenant["vendor_account_id"]:
+    # ABSTRACT_EXPECT_TENANT is optional: the key was already checked against ABSTRACT_VENDOR_ACCOUNT_ID when the
+    # session connected. When it is set (a scheduled job, a second pin), it must match.
+    if expect and expect != s.tenant["vendor_account_id"]:
         print(f"TENANT MISMATCH: connected as {name} ({vid}), expected {S(expect)}", file=sys.stderr)
         return 2
+    if "--quiet" not in args:
+        print(tenant_line(s.tenant), file=sys.stderr)
     return s
+
+
+def tenant_line(tenant):
+    """The one line every command prints first (on standard error, so --json output stays clean): which tenant."""
+    import abx_core as C
+    S = C.sanitize
+    where = "production" if tenant.get("production") else S(str(tenant.get("base_url") or "").replace("https://", ""))
+    return f"Connected to {S(tenant.get('name'))} ({S(tenant.get('vendor_account_id'))}) · {where}"
 
 
 def _print_error(msg, exc=None):
@@ -630,6 +652,70 @@ def validate_cmd(args):
     print("\n  " + (U.teal(ready_txt) if r["ready"] else
                      U.red("Not ready to export.") if not r["ok"] else U.amber("Nothing matched.")) + "\n")
     return 0 if r["ready"] else 1
+
+
+def key_source():
+    """Where the API key comes from, in words, never the key: the environment variable that holds it, and for a
+    command only the program it runs (a command line can carry anything, so the rest of it is not repeated)."""
+    import shlex
+    if (os.environ.get("ABSTRACT_API_KEY") or "").strip():
+        return "ABSTRACT_API_KEY (the key itself, in the environment)"
+    if (os.environ.get("ABSTRACT_API_KEY_FILE") or "").strip():
+        return "ABSTRACT_API_KEY_FILE (a file with the key on one line)"
+    cmd = (os.environ.get("ABSTRACT_API_KEY_COMMAND") or "").strip()
+    if cmd:
+        try:
+            prog = os.path.basename((cmd.split() if os.name == "nt" else shlex.split(cmd))[0])
+        except (ValueError, IndexError):
+            prog = "a command"
+        return f"ABSTRACT_API_KEY_COMMAND (runs {prog} when the key is needed)"
+    if os.environ.get("ABSTRACT_API_KEY_FROM_NETWORK") == "1":
+        return "ABSTRACT_API_KEY_FROM_NETWORK (the network adds it)"
+    return None
+
+
+def status_cmd(args):
+    """Which tenant this computer connects to, from the environment, and where the key comes from. Reads only
+    GET /v2/auth/; prints nothing secret."""
+    import json
+    import abx_core as C
+    S = C.sanitize
+    src, vid = key_source(), os.environ.get("ABSTRACT_VENDOR_ACCOUNT_ID")
+    if not (src and vid):
+        missing = [n for n, ok in (("ABSTRACT_VENDOR_ACCOUNT_ID", vid), ("an API key (ABSTRACT_API_KEY_COMMAND, "
+                   "ABSTRACT_API_KEY_FILE or ABSTRACT_API_KEY)", src)) if not ok]
+        if "--json" in args:
+            print(json.dumps({"connected": False, "missing": missing}, indent=2))
+        else:
+            print("\n  Not connected. Set " + " and ".join(missing) + ".\n  Or start the browser app (--web) and "
+                  "enter them there.\n")
+        return 2
+    try:
+        s = _connect(args)
+        if isinstance(s, int):
+            return s
+    except _errors() as ex:
+        _print_error(f"{C.humanize(ex)}")
+        return 2
+    t = s.tenant
+    pin = os.environ.get("ABSTRACT_EXPECT_TENANT") or _flag_value(args, "--expect-tenant")
+    out = {"connected": True, "tenant": t["name"], "vendor_account_id": t["vendor_account_id"],
+           "base_url": t["base_url"], "production": bool(t.get("production")), "key_from": src,
+           "pinned_tenant": pin or None, "version": C.VERSION}
+    if "--json" in args:
+        print(json.dumps(out, indent=2))
+        return 0
+    rows = [("Tenant", S(t["name"])), ("Vendor account", S(t["vendor_account_id"])),
+            ("API", S(t["base_url"]) + (" (production)" if t.get("production") else "")),
+            ("Key from", src + " · checked, never shown or stored"),
+            ("Pinned", (S(pin) + " (ABSTRACT_EXPECT_TENANT)") if pin else "no; the key is checked against the vendor "
+                                                                        "account ID"),
+            ("Version", C.VERSION)]
+    print()
+    for k, v in rows:
+        print(f"  {k.ljust(15)} {v}")
+    print()
+    return 0
 
 
 def capabilities_cmd(args):

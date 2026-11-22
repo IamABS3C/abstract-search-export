@@ -7,7 +7,7 @@
 # Connect to your tenant in the page (the key stays in the app's memory), or pass these from your shell before
 # `docker compose up`. They are read from your environment, never written into this file, and kept by Docker in the
 # container's settings until `docker compose down`:
-#   ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_EXPECT_TENANT, ABSTRACT_API_KEY
+#   ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_API_KEY, and optionally ABSTRACT_EXPECT_TENANT to pin one tenant
 # To use an image you pulled instead of building one, set ABX_IMAGE to its name.
 name: abstract-search
 

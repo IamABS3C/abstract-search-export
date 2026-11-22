@@ -13,10 +13,9 @@ key="none"
 [ -n "${ABSTRACT_API_KEY:-}" ] && key="an environment variable"
 
 echo "$version is in search-export/ (MCP server: abstract-search; command line: python3 search-export/abstract_search.py)."
-if [ -z "${ABSTRACT_VENDOR_ACCOUNT_ID:-}" ] || [ -z "${ABSTRACT_EXPECT_TENANT:-}" ] || [ "$key" = "none" ]; then
+if [ -z "${ABSTRACT_VENDOR_ACCOUNT_ID:-}" ] || [ "$key" = "none" ]; then
   echo "It is not connected to a tenant yet. Missing:"
   [ -z "${ABSTRACT_VENDOR_ACCOUNT_ID:-}" ] && echo "  ABSTRACT_VENDOR_ACCOUNT_ID (the vendor account ID)"
-  [ -z "${ABSTRACT_EXPECT_TENANT:-}" ] && echo "  ABSTRACT_EXPECT_TENANT (the same ID: the tenant guard)"
   if [ "$key" = "none" ]; then
     if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
       echo "  the API key: add it to this environment as a network secret for api.abstractsecurity.app, then set ABSTRACT_API_KEY_FROM_NETWORK=1 (docs/claude-environments.md)"
@@ -25,6 +24,6 @@ if [ -z "${ABSTRACT_VENDOR_ACCOUNT_ID:-}" ] || [ -z "${ABSTRACT_EXPECT_TENANT:-}
     fi
   fi
 else
-  echo "Credentials are set for vendor account ${ABSTRACT_VENDOR_ACCOUNT_ID} (key: $key). Check the connection with: python3 search-export/abstract_search.py capabilities"
+  echo "Credentials are set for vendor account ${ABSTRACT_VENDOR_ACCOUNT_ID} (key: $key). Check the connection and see the tenant with: python3 search-export/abstract_search.py status (or the status MCP tool)"
 fi
 exit 0

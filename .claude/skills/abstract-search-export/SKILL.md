@@ -12,10 +12,13 @@ command line, `python3 search-export/abstract_search.py …`, with `--json` for 
 
 ## Before anything
 
-1. Check the connection: `status` tool, or `capabilities`. It names the tenant. If it says a variable is missing,
-   tell the user which one to set (`ABSTRACT_VENDOR_ACCOUNT_ID`, `ABSTRACT_EXPECT_TENANT`, and a key source:
-   `ABSTRACT_API_KEY_COMMAND`, `ABSTRACT_API_KEY_FILE`, `ABSTRACT_API_KEY`, or in a cloud environment a network
-   secret with `ABSTRACT_API_KEY_FROM_NETWORK=1`). Never ask the user to paste a key into the chat.
+1. Check the connection: `status` (MCP tool or command). It names the tenant; say the tenant's name and vendor
+   account ID to the user before any other step. If it says a setting is missing, tell the user which one to set:
+   `ABSTRACT_VENDOR_ACCOUNT_ID` and one key source (`ABSTRACT_API_KEY_COMMAND`, for example
+   `op read "op://Security/Abstract API/credential"`, `ABSTRACT_API_KEY_FILE`, `ABSTRACT_API_KEY`, or in a cloud
+   environment a network secret with `ABSTRACT_API_KEY_FROM_NETWORK=1`). With the plugin installed, they are the
+   plugin's settings: `/plugin configure abstract-search-export@abstract-search-export`. `ABSTRACT_EXPECT_TENANT` is
+   optional. Never ask the user to paste a key into the chat.
 2. Never print the key or the key command's output.
 
 ## Find and check
@@ -50,7 +53,7 @@ answer before running anything. A query from `nl_to_kql` is a draft: run it only
 
 ## Guardrails
 
-- The tenant guard (`ABSTRACT_EXPECT_TENANT`) is never bypassed.
+- Never bypass the tenant checks: the key must belong to the vendor account, and a set `ABSTRACT_EXPECT_TENANT` must match.
 - Exported events are real data: do not paste them into chat, commits or issues.
 - Help topics: `search-export/docs/` (SEARCH-REFERENCE.md, FIELDSETS-AND-VIEWS.md, MCP.md, CLI.md, DOCKER.md, SECURITY.md,
   TROUBLESHOOTING.md).

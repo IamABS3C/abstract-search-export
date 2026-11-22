@@ -14,7 +14,8 @@ LABEL org.opencontainers.image.title="Abstract Search & Export" \
       org.opencontainers.image.vendor="Abstract Security" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
-      org.opencontainers.image.source="${SOURCE}"
+      org.opencontainers.image.source="${SOURCE}" \
+      org.opencontainers.image.licenses="MIT"
 
 # An unprivileged user, and the one folder the app writes to: exports, saved searches and logs all live under it.
 RUN adduser -D -u 10001 -h /home/abx abx \

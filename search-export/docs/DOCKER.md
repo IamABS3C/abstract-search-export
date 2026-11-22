@@ -61,7 +61,6 @@ docker run -d --name abstract-search -p 127.0.0.1:8765:8765 \
   -v "$HOME/.abstract/api-key:/run/secrets/abstract_api_key:ro" \
   -e ABSTRACT_API_KEY_FILE=/run/secrets/abstract_api_key \
   -e ABSTRACT_VENDOR_ACCOUNT_ID=your-vendor-account-id \
-  -e ABSTRACT_EXPECT_TENANT=your-vendor-account-id \
   abstract-search-export
 ```
 
@@ -71,13 +70,12 @@ Docker secrets and Kubernetes secrets mount a file the same way.
 
 ```
 export ABSTRACT_VENDOR_ACCOUNT_ID=your-vendor-account-id
-export ABSTRACT_EXPECT_TENANT=your-vendor-account-id
 export ABSTRACT_API_KEY_COMMAND='op read op://vault/abstract/api-key'
 export ABSTRACT_API_KEY="$($ABSTRACT_API_KEY_COMMAND)"
 ./run-docker.sh
 ```
 
-`ABSTRACT_EXPECT_TENANT` is the tenant guard: every command refuses to run when the key belongs to any other tenant.
+The key is checked against `ABSTRACT_VENDOR_ACCOUNT_ID` when the app connects, and Abstract refuses a key for another account. `ABSTRACT_EXPECT_TENANT` is optional: it pins one tenant, for scheduled jobs, and every command then refuses to run when the key belongs to another. The script passes it on when it is set.
 
 ## Without the script
 
@@ -103,7 +101,7 @@ docker compose logs app
 docker compose down
 ```
 
-The image is also published, so you can run it without this folder. It is the same image in two registries, for Intel and Arm, tagged with the version (for example `0.5.0`), the minor line (`0.5`) and `latest`:
+The image is also published, so you can run it without this folder. It is the same image in two registries, for Intel and Arm, tagged with the version (for example `0.6.0`), the minor line (`0.6`) and `latest`:
 
 | Registry | Image |
 |---|---|
@@ -114,7 +112,7 @@ The image is also published, so you can run it without this folder. It is the sa
 docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export
 ```
 
-Set `ABX_IMAGE` to either name and the start script and the Compose file use it without building. The start script on its own, outside the program folder, pulls `ghcr.io/iamabs3c/abstract-search-export`; set `ABX_PUBLISHED_IMAGE=iamabs3c/abstract-search-export` to pull from Docker Hub instead.
+Set `ABX_IMAGE` to either name and the start script and the Compose file use it without building. The start script on its own, outside the program folder, pulls `iamabs3c/abstract-search-export` from Docker Hub; set `ABX_PUBLISHED_IMAGE=ghcr.io/iamabs3c/abstract-search-export` to pull from GitHub's container registry instead.
 
 ## Another port
 

@@ -18,9 +18,6 @@
     "ABSTRACT_VENDOR_ACCOUNT_ID": {
       "description": "Your Abstract vendor account ID."
     },
-    "ABSTRACT_EXPECT_TENANT": {
-      "description": "The same vendor account ID: commands refuse to run against any other tenant."
-    },
     "ABSTRACT_API_KEY": {
       "description": "An Abstract API key. Kept as an encrypted Codespaces secret; never written into the workspace."
     }

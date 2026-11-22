@@ -13,16 +13,17 @@
 #   ABX_IMAGE      the image to run. Default: built from this folder when it holds a Dockerfile, otherwise pulled.
 #   ABX_PORT       the port on this computer (default 8765)
 #   ABX_EXPORTS    where exports are written on this computer (default ~/AbstractExports)
-# To connect without typing in the page, set these in your shell first: ABSTRACT_VENDOR_ACCOUNT_ID,
-# ABSTRACT_EXPECT_TENANT, ABSTRACT_API_KEY. Docker keeps them in the container's settings until it is removed
-# ("stop" removes it); typing the key in the page, or a mounted secret file, keeps it out of them.
+# To connect without typing in the page, set these in your shell first: ABSTRACT_VENDOR_ACCOUNT_ID and
+# ABSTRACT_API_KEY, plus ABSTRACT_EXPECT_TENANT if you want to pin one tenant (optional). Docker keeps them in the
+# container's settings until it is removed ("stop" removes it); typing the key in the page, or a mounted secret file,
+# keeps it out of them.
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 NAME=${ABX_CONTAINER:-abstract-search}
 PORT=${ABX_PORT:-8765}
 OUT=${ABX_EXPORTS:-$HOME/AbstractExports}
-PUBLISHED=${ABX_PUBLISHED_IMAGE:-ghcr.io/iamabs3c/abstract-search-export:latest}
+PUBLISHED=${ABX_PUBLISHED_IMAGE:-iamabs3c/abstract-search-export:latest}
 IMAGE=${ABX_IMAGE:-}
 
 say() { printf '%s\n' "$*"; }

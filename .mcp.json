@@ -3,10 +3,12 @@
     "abstract-search": {
       "type": "stdio",
       "command": "python3",
-      "args": ["search-export/abstract_search.py", "mcp"],
+      "args": [
+        "search-export/abstract_search.py",
+        "mcp"
+      ],
       "env": {
         "ABSTRACT_VENDOR_ACCOUNT_ID": "${ABSTRACT_VENDOR_ACCOUNT_ID:-}",
-        "ABSTRACT_EXPECT_TENANT": "${ABSTRACT_EXPECT_TENANT:-}",
         "ABSTRACT_API_KEY_COMMAND": "${ABSTRACT_API_KEY_COMMAND:-}",
         "ABSTRACT_API_KEY_FILE": "${ABSTRACT_API_KEY_FILE:-}",
         "ABSTRACT_API_KEY_FROM_NETWORK": "${ABSTRACT_API_KEY_FROM_NETWORK:-}",

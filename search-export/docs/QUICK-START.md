@@ -21,10 +21,11 @@ The same steps, with the same names, in all three ways to use it:
 
 ## Command line
 
-1. Set `ABSTRACT_API_KEY`, `ABSTRACT_VENDOR_ACCOUNT_ID` and `ABSTRACT_EXPECT_TENANT` in the environment.
+1. Set `ABSTRACT_VENDOR_ACCOUNT_ID` and one source for the key in the environment: `ABSTRACT_API_KEY_COMMAND` (recommended, for example `op read "op://Security/Abstract API/credential"` for 1Password or `security find-generic-password -s abstract-api -a api-key -w` for the macOS keychain), `ABSTRACT_API_KEY_FILE` or `ABSTRACT_API_KEY`.
 2. Run the steps:
 
 ```
+python3 abstract_search.py status
 python3 abstract_search.py capabilities
 python3 abstract_search.py datasets
 python3 abstract_search.py preview  --dataset "<your dataset>" --last 24h
@@ -32,7 +33,7 @@ python3 abstract_search.py validate --dataset "<your dataset>" --last 24h
 python3 abstract_search.py export   --dataset "<your dataset>" --last 24h --merge
 ```
 
-Filter with `--where`, for example `--where "user_name !contains example.com"` or `--where dest_port=22,3389`, or give the whole search as KQL with `--kql "events | where …"`. `kql check "…"` says how a query runs here; `nl "…"` turns plain English into KQL. Every command shows each call it makes to Abstract's API as it happens, the key masked; `--hide-api` turns that off.
+Filter with `--where`, for example `--where "user_name !contains example.com"` or `--where dest_port=22,3389`, or give the whole search as KQL with `--kql "events | where …"`. `status` shows which tenant you are connected to; every command that connects also prints a `Connected to …` line first. `kql check "…"` says how a query runs here; `nl "…"` turns plain English into KQL. Every command shows each call it makes to Abstract's API as it happens, the key masked; `--hide-api` turns that off.
 
 To schedule a search, let the tool write the job: `automate cron --from-saved "<name>" --every 1d --out <folder>`, or in the browser app **Export → Run it on a schedule**. Exit code 3 means "Partial: recent data only. Older data was not searched."
 

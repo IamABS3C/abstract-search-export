@@ -103,10 +103,10 @@ class Tools(_Mcp):
         self.assertEqual(r["structuredContent"]["vendor_account_id"], self.tenant.vid)
 
     def test_status_explains_what_to_set(self):
-        os.environ.pop("ABSTRACT_EXPECT_TENANT")
+        os.environ.pop("ABSTRACT_VENDOR_ACCOUNT_ID")
         r = self.call("status")
         self.assertFalse(r["structuredContent"]["connected"])
-        self.assertIn("ABSTRACT_EXPECT_TENANT", r["content"][0]["text"])
+        self.assertIn("ABSTRACT_VENDOR_ACCOUNT_ID", r["content"][0]["text"])
 
     def test_kql_check(self):
         r = self.call("kql_check", kql='events | where data_stream.dataset == "fw" and action == "Login"')

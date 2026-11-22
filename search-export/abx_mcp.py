@@ -4,8 +4,9 @@ tool's searches, checks, exports, saved views and fieldsets through the Model Co
     python3 abstract_search.py mcp               stdio (the client starts this process)
     python3 abstract_search.py mcp --http 8765   streamable HTTP on 127.0.0.1 only, with a bearer token
 
-The tenant comes from the environment, exactly as for the command line (ABSTRACT_VENDOR_ACCOUNT_ID,
-ABSTRACT_EXPECT_TENANT, and ABSTRACT_API_KEY or ABSTRACT_API_KEY_COMMAND). The key is never a tool argument and never
+The tenant comes from the environment, exactly as for the command line: ABSTRACT_VENDOR_ACCOUNT_ID and a key
+(ABSTRACT_API_KEY_COMMAND, ABSTRACT_API_KEY_FILE or ABSTRACT_API_KEY); ABSTRACT_EXPECT_TENANT optionally pins one
+tenant. Every answer from status names the tenant it is connected to. The key is never a tool argument and never
 appears in a result. A change to the tenant needs a plan from this same process and then apply_change with its token;
 the plan tells the assistant to show the user the changes and get a yes first.
 
@@ -52,7 +53,8 @@ WRITES_OFF = ("Changes to your Abstract tenant are switched off for this MCP ser
 
 
 def _writes_from_env():
-    return os.environ.get("ABSTRACT_MCP_ALLOW_WRITES", "").strip() == "1"
+    # "1", or "true" as a desktop extension's on/off setting writes it
+    return os.environ.get("ABSTRACT_MCP_ALLOW_WRITES", "").strip().lower() in ("1", "true")
 ALLOWED_HOSTS = ("127.0.0.1", "localhost")
 
 INSTRUCTIONS = (
@@ -129,9 +131,9 @@ class Server:
         if not os.environ.get("ABSTRACT_VENDOR_ACCOUNT_ID") or not (
                 os.environ.get("ABSTRACT_API_KEY") or os.environ.get("ABSTRACT_API_KEY_COMMAND")
                 or os.environ.get("ABSTRACT_API_KEY_FILE") or os.environ.get("ABSTRACT_API_KEY_FROM_NETWORK") == "1"):
-            raise ToolError("Not connected. Set ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_EXPECT_TENANT and "
-                            "ABSTRACT_API_KEY_COMMAND (or ABSTRACT_API_KEY) in this MCP server's environment, then "
-                            "restart it. See docs/MCP.md.")
+            raise ToolError("Not connected. Set ABSTRACT_VENDOR_ACCOUNT_ID and ABSTRACT_API_KEY_COMMAND (or "
+                            "ABSTRACT_API_KEY or ABSTRACT_API_KEY_FILE) in this MCP server's environment, then restart "
+                            "it. See docs/MCP.md.")
         saved = os.environ.pop("ABSTRACT_EXPECT_TENANT", None)
         try:
             t = self.s.connect_from_env()
@@ -141,12 +143,7 @@ class Server:
         if not t:
             raise ToolError("Not connected: the API key could not be read from the environment. Set "
                             "ABSTRACT_API_KEY_COMMAND (preferred) or ABSTRACT_API_KEY and restart the server.")
-        if not expect:
-            vid = t["vendor_account_id"]
-            self.s.disconnect()
-            raise ToolError(f"Connected as {C.sanitize(t['name'])} ({vid}) but ABSTRACT_EXPECT_TENANT is not set. Set "
-                            f"ABSTRACT_EXPECT_TENANT={vid} so nothing can run against the wrong tenant, then restart.")
-        if expect != t["vendor_account_id"]:
+        if expect and expect != t["vendor_account_id"]:     # optional second pin; the key already matched the account
             vid = t["vendor_account_id"]
             self.s.disconnect()
             raise ToolError(f"Tenant mismatch: the key belongs to {vid}, ABSTRACT_EXPECT_TENANT is {expect}.")
@@ -298,7 +295,8 @@ class Server:
             return (f"Connected to {C.sanitize(t['name'])} ({t['vendor_account_id']}) at {t['base_url']}; {mode}; "
                     f"previews return at most {MAX_ROWS} rows.",
                     {"connected": True, "tenant": t["name"], "vendor_account_id": t["vendor_account_id"],
-                     "base_url": t["base_url"], "version": C.VERSION, "writes": self.allow_writes,
+                     "base_url": t["base_url"], "production": bool(t.get("production")), "version": C.VERSION,
+                     "writes": self.allow_writes,
                      "max_rows": MAX_ROWS})
         try:
             self.ensure()
@@ -307,8 +305,9 @@ class Server:
             msg = C.humanize(ex)
             return (msg, {"connected": False, "reason": msg, "version": C.VERSION, "writes": self.allow_writes,
                           "max_rows": MAX_ROWS,
-                          "set": ["ABSTRACT_VENDOR_ACCOUNT_ID", "ABSTRACT_EXPECT_TENANT",
-                                  "ABSTRACT_API_KEY_COMMAND or ABSTRACT_API_KEY", "ABSTRACT_BASE_URL (optional)"]})
+                          "set": ["ABSTRACT_VENDOR_ACCOUNT_ID",
+                                  "ABSTRACT_API_KEY_COMMAND, ABSTRACT_API_KEY_FILE or ABSTRACT_API_KEY",
+                                  "ABSTRACT_EXPECT_TENANT (optional)", "ABSTRACT_BASE_URL (optional)"]})
 
     def t_capabilities(self, a):
         caps = self.ensure().capabilities(refresh=bool(a.get("refresh")))

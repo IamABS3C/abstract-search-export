@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "abstract-search-export",
+  "description": "Abstract Search & Export for Claude Code: search, validate and export every event in an Abstract Security tenant, and keep saved views and fieldsets as code.",
+  "owner": { "name": "The Abstract Search & Export authors", "url": "https://github.com/IamABS3C/abstract-search-export" },
+  "plugins": [
+    {
+      "name": "abstract-search-export",
+      "source": "./",
+      "description": "The Abstract Search & Export MCP server, skill and agent. Asks for your vendor account ID and API key (or a 1Password or keychain command) on install.",
+      "category": "security"
+    }
+  ]
+}

@@ -42,12 +42,19 @@ jobs:
           python3 - <<'PY'
           import json
           for f in (".mcp.json", ".vscode/mcp.json", ".devcontainer/devcontainer.json", ".claude/settings.json",
-                    "search-export/.devcontainer/devcontainer.json"):
+                    "search-export/.devcontainer/devcontainer.json", ".claude-plugin/plugin.json",
+                    ".claude-plugin/marketplace.json"):
               json.load(open(f))
               print("ok", f)
           PY
       - name: Shell scripts are clean
         run: shellcheck -s sh scripts/welcome.sh scripts/session-start.sh search-export/run-docker.sh run.sh
+      - name: The plugin's version is the tool's version
+        run: test "$(python3 -c 'import json;print(json.load(open(".claude-plugin/plugin.json"))["version"])')" = "$(tr -d ' \r\n' < search-export/VERSION)"
+      - name: The Claude Desktop extension builds and its server answers
+        run: |
+          python3 scripts/build-mcpb.py
+          npx -y @anthropic-ai/mcpb@2 validate build/mcpb/manifest.json
       - name: Every screen and capability is documented
         run: python3 search-export/tools/coverage_matrix.py > coverage.txt || { tail -n 40 coverage.txt; exit 1; }; tail -n 2 coverage.txt
       - name: The session script never fails a session

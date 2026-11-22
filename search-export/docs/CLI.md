@@ -6,21 +6,20 @@ The easiest way to write a command is not to write it at all: build the search i
 
 ## Credentials
 
-Set three variables in the environment. Never put the key in a script or a scheduler definition: inject it from your secret store.
+Set two things in the environment: your vendor account ID and one source for the key. Never put the key in a script or a scheduler definition: inject it from your secret store.
 
 | Variable | Value |
 |---|---|
 | `ABSTRACT_API_KEY` | The API key. Or set `ABSTRACT_API_KEY_COMMAND` instead: a command that prints the key from your secret manager or keychain, run once when the tool connects (see README, Where the API key lives). |
 | `ABSTRACT_API_KEY_FILE` | Instead of the two above: a file that holds the key on one line, where a server mounts secrets as files (for example `/run/secrets/abstract_api_key`). |
 | `ABSTRACT_VENDOR_ACCOUNT_ID` | Your vendor account ID. |
-| `ABSTRACT_EXPECT_TENANT` | The vendor account ID you expect. Every command that connects stops if the key belongs to another tenant. |
+| `ABSTRACT_EXPECT_TENANT` | Optional. Pins one tenant, for scheduled jobs: every command refuses to run when the key belongs to another. |
 
 macOS or Linux (the key is not echoed and stays out of your shell history):
 
 ```
 printf 'API key: '; read -rs ABSTRACT_API_KEY; echo; export ABSTRACT_API_KEY
 export ABSTRACT_VENDOR_ACCOUNT_ID=AbC123xYz0
-export ABSTRACT_EXPECT_TENANT=AbC123xYz0
 ```
 
 Windows PowerShell:
@@ -28,8 +27,24 @@ Windows PowerShell:
 ```
 $env:ABSTRACT_API_KEY = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'API key')).Password
 $env:ABSTRACT_VENDOR_ACCOUNT_ID = "AbC123xYz0"
-$env:ABSTRACT_EXPECT_TENANT = "AbC123xYz0"
 ```
+
+With a key command instead of a typed key, for example 1Password or the macOS keychain:
+
+```
+export ABSTRACT_API_KEY_COMMAND='op read "op://Security/Abstract API/credential"'           # 1Password
+export ABSTRACT_API_KEY_COMMAND='security find-generic-password -s abstract-api -a api-key -w'  # or the macOS keychain
+```
+
+When the tool connects, the key is checked against `ABSTRACT_VENDOR_ACCOUNT_ID`, and Abstract refuses a key that belongs to another vendor account. `ABSTRACT_EXPECT_TENANT` (or `--expect-tenant ID`) adds a second pin: when it is set, it must match, otherwise the command stops with `TENANT MISMATCH`. Jobs written by `automate` set it.
+
+Every command that connects prints one line first, on standard error, so `--json` output stays clean:
+
+```
+Connected to Example Corp (AbC123xYz0) · production
+```
+
+For a non-production API it names the API host instead of `production`. `--quiet` hides it.
 
 On Windows, run the tool as `py abstract_search.py` if `python3` is not on your PATH. If Abstract gave you an API address other than `https://api.abstractsecurity.app`, also set `ABSTRACT_BASE_URL`. Exports go to `~/AbstractExports` unless you set `ABX_OUT_ROOT`.
 
@@ -44,6 +59,7 @@ Start here
   python3 abstract_search.py --web        the browser app  [--port N] [--no-browser]
 
 Commands (the same steps as the browser app; add --json for machine-readable output)
+  status                                  which tenant this computer connects to, and where the key comes from
   capabilities                            what this tenant supports: KQL, archive, complete events
   datasets                                every dataset, with 24-hour volume
   views                                   every saved view in Abstract, and how it runs here
@@ -77,7 +93,23 @@ plus, if you need them: --storage auto|recent   --fields a,b,c | --every-field
 
 ## The commands, in the order you use them
 
-### 1. What this tenant supports
+### 1. Check the connection, and what this tenant supports
+
+`status` shows which tenant the environment connects to, the API address, where the key comes from and whether a tenant pin is set. It never shows the key. For `ABSTRACT_API_KEY_COMMAND` it names only the program the command runs.
+
+```
+$ python3 abstract_search.py status
+  Tenant          Example Corp
+  Vendor account  AbC123xYz0
+  API             https://api.abstractsecurity.app (production)
+  Key from        ABSTRACT_API_KEY_COMMAND (runs op when the key is needed) · checked, never shown or stored
+  Pinned          no; the key is checked against the vendor account ID
+  Version         0.6.0
+```
+
+With `--json` it prints `connected`, `tenant`, `vendor_account_id`, `base_url`, `production`, `key_from`, `pinned_tenant` and `version`. When the vendor account ID or a key source is missing, it says what to set and exits 2.
+
+`capabilities` shows what the tenant and key support:
 
 ```
 $ python3 abstract_search.py capabilities
@@ -327,7 +359,7 @@ When the export stops before it starts (wrong tenant, unknown dataset or field, 
 
 `validate` ends with "Ready to export: N events. Estimated time: about M minutes". `export` prints `estimated time: …` with its plan and "… left" on each finished slice.
 
-`validate` exits 0 when the search is ready to export, 1 when it is not ready or nothing matched, and 2 on an error. `preview`, `capabilities`, `datasets`, `views`, `searches` and `exports` exit 0, or 2 on an error. `fields` exits 1 when the dataset had no events in the last 30 days. These commands print text, or JSON with `--json`, and no result line.
+`validate` exits 0 when the search is ready to export, 1 when it is not ready or nothing matched, and 2 on an error. `status`, `preview`, `capabilities`, `datasets`, `views`, `searches` and `exports` exit 0, or 2 on an error. `fields` exits 1 when the dataset had no events in the last 30 days. These commands print text, or JSON with `--json`, and no result line.
 
 ## Scheduling
 
@@ -360,7 +392,7 @@ fi
 exit "$rc"
 ```
 
-`/etc/abstract/export.env` holds one `NAME=value` line for each of the three `ABSTRACT_*` variables and is readable only by the service account. On macOS, `date` takes `-v-1d` instead of `-d yesterday`.
+`/etc/abstract/export.env` holds one `NAME=value` line for each of `ABSTRACT_VENDOR_ACCOUNT_ID`, the key (or `ABSTRACT_API_KEY_COMMAND`) and `ABSTRACT_EXPECT_TENANT`, which pins the job to one tenant, and is readable only by the service account. On macOS, `date` takes `-v-1d` instead of `-d yesterday`.
 
 Windows Task Scheduler, with the credentials set as environment variables from your secret store:
 

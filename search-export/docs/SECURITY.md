@@ -21,7 +21,7 @@ In a dev container or GitHub Codespaces, use Codespaces secrets or `ABSTRACT_API
 
 ## Tenant guard
 
-On the command line, every command that connects (`capabilities`, `datasets`, `views`, `fields`, `preview`, `validate`, `export`, `kql`, `nl`, `fieldsets` and `mcp`) refuses to run unless `ABSTRACT_EXPECT_TENANT` (or `--expect-tenant`) names the vendor account the key belongs to. The check is the first call the tool makes (`GET /v2/auth/`). With `--from-view` and `--from-file` it also runs first, before any saved view is read or any search is validated, so a mixed-up key cannot read another tenant's views. `searches` and `exports` read only local files and need no tenant.
+On the command line, every command that connects (`status`, `capabilities`, `datasets`, `views`, `fields`, `preview`, `validate`, `export`, `kql`, `nl`, `fieldsets` and `mcp`) first checks that the key belongs to the vendor account named by `ABSTRACT_VENDOR_ACCOUNT_ID`, and stops if it does not; Abstract also refuses a key for another account. `ABSTRACT_EXPECT_TENANT` (or `--expect-tenant`) is optional: it pins one tenant, for scheduled jobs, and when it is set every command refuses to run with `TENANT MISMATCH` unless it names that same vendor account. The check is the first call the tool makes (`GET /v2/auth/`). With `--from-view` and `--from-file` it also runs first, before any saved view is read or any search is validated, so a mixed-up key cannot read another tenant's views. `searches` and `exports` read only local files and need no tenant. Once connected, each command prints `Connected to <tenant name> (<vendor account id>) · production` on standard error (`--quiet` hides it), so you can see which tenant it is working on.
 
 ## What the tool calls
 

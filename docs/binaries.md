@@ -21,13 +21,13 @@ sha256sum -c SHA256SUMS --ignore-missing          # Linux
 ```
 
 ```
-(Get-FileHash .\abstract-search-0.5.0-windows-x64.exe).Hash      # Windows: compare with the line in SHA256SUMS
+(Get-FileHash .\abstract-search-0.6.0-windows-x64.exe).Hash      # Windows: compare with the line in SHA256SUMS
 ```
 
 With the GitHub CLI you can also check that the file was built by this repository's release workflow:
 
 ```
-gh attestation verify abstract-search-0.5.0-macos-arm64 --repo IamABS3C/abstract-search-export
+gh attestation verify abstract-search-0.6.0-macos-arm64 --repo IamABS3C/abstract-search-export
 ```
 
 ## Run it
@@ -35,13 +35,13 @@ gh attestation verify abstract-search-0.5.0-macos-arm64 --repo IamABS3C/abstract
 macOS and Linux:
 
 ```
-chmod +x abstract-search-0.5.0-macos-arm64
-./abstract-search-0.5.0-macos-arm64 --web        # the browser app
-./abstract-search-0.5.0-macos-arm64              # the guided terminal
-./abstract-search-0.5.0-macos-arm64 --help       # the command line
+chmod +x abstract-search-0.6.0-macos-arm64
+./abstract-search-0.6.0-macos-arm64 --web        # the browser app
+./abstract-search-0.6.0-macos-arm64              # the guided terminal
+./abstract-search-0.6.0-macos-arm64 --help       # the command line
 ```
 
-Windows: double-click the file for the guided terminal, or in PowerShell run `.\abstract-search-0.5.0-windows-x64.exe --web`.
+Windows: double-click the file for the guided terminal, or in PowerShell run `.\abstract-search-0.6.0-windows-x64.exe --web`.
 
 The first start takes a few seconds while the file unpacks itself. Every command in the docs works the same way: where they say `python3 abstract_search.py …`, use the file's name instead.
 

@@ -13,9 +13,9 @@ Settings, all optional (environment variables):
   ABX_IMAGE      the image to run. Default: built from this folder when it holds a Dockerfile, otherwise pulled.
   ABX_PORT       the port on this computer (default 8765)
   ABX_EXPORTS    where exports are written on this computer (default: AbstractExports in your user folder)
-To connect without typing in the page, set these first: ABSTRACT_VENDOR_ACCOUNT_ID, ABSTRACT_EXPECT_TENANT,
-ABSTRACT_API_KEY. Docker keeps them in the container's settings until it is removed ("stop" removes it); typing the
-key in the page, or a mounted secret file, keeps it out of them.
+To connect without typing in the page, set these first: ABSTRACT_VENDOR_ACCOUNT_ID and ABSTRACT_API_KEY, plus
+ABSTRACT_EXPECT_TENANT if you want to pin one tenant (optional). Docker keeps them in the container's settings until
+it is removed ("stop" removes it); typing the key in the page, or a mounted secret file, keeps it out of them.
 
 If Windows refuses to run the script: powershell -ExecutionPolicy Bypass -File .\run-docker.ps1
 #>
@@ -24,7 +24,7 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Name = if ($env:ABX_CONTAINER) { $env:ABX_CONTAINER } else { 'abstract-search' }
 $Port = if ($env:ABX_PORT) { $env:ABX_PORT } else { '8765' }
 $Out = if ($env:ABX_EXPORTS) { $env:ABX_EXPORTS } else { Join-Path $env:USERPROFILE 'AbstractExports' }
-$Published = if ($env:ABX_PUBLISHED_IMAGE) { $env:ABX_PUBLISHED_IMAGE } else { 'ghcr.io/iamabs3c/abstract-search-export:latest' }
+$Published = if ($env:ABX_PUBLISHED_IMAGE) { $env:ABX_PUBLISHED_IMAGE } else { 'iamabs3c/abstract-search-export:latest' }
 $script:Image = $env:ABX_IMAGE
 
 function Stop-With([string]$Message) { Write-Host $Message -ForegroundColor Red; exit 1 }

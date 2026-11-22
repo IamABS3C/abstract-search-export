@@ -12,10 +12,6 @@ Command line. The key belongs to a different tenant than `ABSTRACT_EXPECT_TENANT
 
 The browser app or the terminal connected from the environment, and the key belongs to another tenant than `ABSTRACT_EXPECT_TENANT` names. It disconnected again. Use the right key, or correct the variable.
 
-### connected as NAME (ID). Set ABSTRACT_EXPECT_TENANT=ID (or pass --expect-tenant ID) so …
-
-Command line. `ABSTRACT_EXPECT_TENANT` is required for every command that connects: `capabilities`, `datasets`, `views`, `fields`, `preview`, `validate` and `export`. Set it to the vendor account ID shown, after checking the tenant name is the one you mean.
-
 ### this key belongs to vendor account X, not Y. Use X, or a key for the account you meant.
 
 The vendor account ID you entered does not match the key. Use the ID shown, or a key for the account you meant. On the command line this reads `this API key belongs to vendor account X, not Y`.
@@ -27,6 +23,10 @@ Command line, `export`. The key or the vendor account ID is missing from the env
 ### set ABSTRACT_VENDOR_ACCOUNT_ID and ABSTRACT_API_KEY (or ABSTRACT_API_KEY_COMMAND) first (see Start-Here-Guide.html, Part 3)
 
 Command line, `capabilities`, `datasets`, `views`, `fields`, `preview` and `validate`. The same cause: set both variables in the environment.
+
+### Not connected. Set ABSTRACT_VENDOR_ACCOUNT_ID and an API key (ABSTRACT_API_KEY_COMMAND, ABSTRACT_API_KEY_FILE or ABSTRACT_API_KEY).
+
+Command line, `status`. The message names what is missing; it exits 2. Set it in the environment, or start the browser app (`--web`) and enter the details there.
 
 ### The environment credentials did not work: …
 
@@ -289,7 +289,7 @@ The option is not known, or it is not the first argument. `--web` and `--menu` m
 
 ### unknown command 'X'; see --help
 
-The commands are `capabilities`, `datasets`, `views`, `searches`, `exports`, `fields`, `preview`, `validate` and `export`. See `--help`.
+The commands are `status`, `capabilities`, `datasets`, `views`, `searches`, `exports`, `fields`, `preview`, `validate` and `export`. See `--help`.
 
 ### --port needs a number, e.g. --port 8765 / --port must be between 0 and 65535
 

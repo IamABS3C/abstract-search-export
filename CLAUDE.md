@@ -11,18 +11,20 @@ tool when a job is too big, too repetitive or too scripted for the UI.
   session has no port a person can open: use the MCP tools or the command line there.
 - MCP server: `.mcp.json` registers it as `abstract-search` (`python3 search-export/abstract_search.py mcp`). Its tools
   are the same steps as the command line.
-- Credentials come from the environment only: `ABSTRACT_VENDOR_ACCOUNT_ID`, `ABSTRACT_EXPECT_TENANT`, and one source
-  for the key: `ABSTRACT_API_KEY_COMMAND` (preferred: a secret-manager command that prints the key),
+- Credentials come from the environment only: `ABSTRACT_VENDOR_ACCOUNT_ID` and one source for the key: `ABSTRACT_API_KEY_COMMAND` (preferred: a secret-manager command that prints the key),
   `ABSTRACT_API_KEY_FILE` (a mounted secret file), `ABSTRACT_API_KEY`, or `ABSTRACT_API_KEY_FROM_NETWORK=1` where the
   environment adds the key to requests itself (a cloud environment's network secret; see
-  `docs/claude-environments.md`). Optional `ABSTRACT_BASE_URL` (default `https://api.abstractsecurity.app`).
+  `docs/claude-environments.md`). Optional: `ABSTRACT_BASE_URL` (default `https://api.abstractsecurity.app`) and
+  `ABSTRACT_EXPECT_TENANT`, a second pin that must match when set. With the plugin installed, these are the plugin's
+  settings instead (`/plugin configure abstract-search-export@abstract-search-export`).
 - When the session starts, `scripts/session-start.sh` prints whether credentials are set and what is missing. If
   something is missing, tell the user which variable or secret to add; never ask them to paste a key into the chat.
 
 ## Rules when you use it for someone
 
-1. **Tenant guard.** Every command refuses to run unless `ABSTRACT_EXPECT_TENANT` names the tenant the key belongs to.
-   Never work around that check. Say which tenant you are connected to before you search.
+1. **Tenant first.** Run `status` (the MCP tool or the command) and say which tenant you are connected to, by name and
+   vendor account ID, before you search. The key is checked against the vendor account ID, and a set
+   `ABSTRACT_EXPECT_TENANT` must match; never work around either check.
 2. **Never show the key.** Do not print, echo, log, paste or write the API key or the output of the key command. Do not
    put a key in any file in this repo. The tool masks it in every API trace; keep it that way.
 3. **Check KQL first.** Run `kql check` (or the `kql_check` tool) before running a query. Show the user the query and

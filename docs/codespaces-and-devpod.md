@@ -4,12 +4,11 @@ The repository has a dev container: Python 3.12, nothing else installed, port 87
 
 ## GitHub Codespaces
 
-1. Add your credentials as Codespaces secrets first, so they are never typed into the workspace. In GitHub: **Settings → Codespaces → Secrets → New secret**, three times, and give each one access to this repository (or your fork of it):
+1. Add your credentials as Codespaces secrets first, so they are never typed into the workspace. In GitHub: **Settings → Codespaces → Secrets → New secret**, twice, and give each one access to this repository (or your fork of it):
 
 | Secret | Value |
 |---|---|
 | `ABSTRACT_VENDOR_ACCOUNT_ID` | Your vendor account ID. |
-| `ABSTRACT_EXPECT_TENANT` | The same ID. |
 | `ABSTRACT_API_KEY` | Your API key. |
 
 2. Choose **Open in GitHub Codespaces** on the repository's main page. When the codespace opens, the terminal says the tool is ready and whether the credentials are set.

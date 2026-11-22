@@ -15,12 +15,12 @@ Open the link it prints (in Docker Desktop it is in the container's **Logs** tab
 ## Run one command, a scheduled export or the MCP server
 
 ```
-docker run --rm -e ABSTRACT_VENDOR_ACCOUNT_ID -e ABSTRACT_EXPECT_TENANT -e ABSTRACT_API_KEY \
+docker run --rm -e ABSTRACT_VENDOR_ACCOUNT_ID -e ABSTRACT_API_KEY \
   -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export export --dataset "Okta" --last 24h --merge
 ```
 
 ```
-docker run --rm -i -e ABSTRACT_VENDOR_ACCOUNT_ID -e ABSTRACT_EXPECT_TENANT -e ABSTRACT_API_KEY iamabs3c/abstract-search-export mcp
+docker run --rm -i -e ABSTRACT_VENDOR_ACCOUNT_ID -e ABSTRACT_API_KEY iamabs3c/abstract-search-export mcp
 ```
 
 A key given with `-e` shows in `docker inspect` until the container is removed. Where you can, mount it as a file and set `ABSTRACT_API_KEY_FILE` instead: [Run it in Docker](https://github.com/IamABS3C/abstract-search-export/blob/main/search-export/docs/DOCKER.md).
@@ -30,8 +30,8 @@ A key given with `-e` shows in `docker inspect` until the container is removed. 
 | Tag | What it is |
 |---|---|
 | `latest` | The newest release. |
-| `0.5` | The newest release in the 0.5 line. |
-| `0.5.0` | That exact release. |
+| `0.6` | The newest release in the 0.6 line. |
+| `0.6.0` | That exact release. |
 
 Every tag is built for Intel (`linux/amd64`) and Arm (`linux/arm64`). The same image is on GitHub's registry as `ghcr.io/iamabs3c/abstract-search-export`.
 

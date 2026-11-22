@@ -178,6 +178,10 @@ jobs:
           path: dist
           pattern: binary-*
           merge-multiple: true
+      - name: The Claude Desktop extension
+        run: |
+          python3 scripts/build-mcpb.py
+          npx -y @anthropic-ai/mcpb@2 validate build/mcpb/manifest.json
       - name: Source archive and checksums
         run: |
           git archive --format=zip --prefix="abstract-search-export-${VERSION}/" -o "dist/abstract-search-export-${VERSION}-source.zip" HEAD search-export
@@ -210,6 +214,8 @@ jobs:
           **A single file** (no Python, no Docker): download the file for your system below, check it against \`SHA256SUMS\`, and run it. \`abstract-search --web\` opens the browser app; with no arguments it opens the guided terminal.
 
           **Python 3.8 or newer:** download the source archive and run \`python3 search-export/abstract_search.py --web\`.
+
+          **Claude Code:** \`/plugin install abstract-search-export --marketplace ${GITHUB_REPOSITORY}\`, then enter your vendor account ID and the key (or a 1Password or keychain command) when it asks. **Claude Desktop:** download \`abstract-search-export-${VERSION}.mcpb\` below and double-click it.
 
           Every file below and the image carry a build record: \`gh attestation verify <file> --repo ${GITHUB_REPOSITORY}\`.
           EOF

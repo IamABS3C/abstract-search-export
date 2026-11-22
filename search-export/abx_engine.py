@@ -2747,12 +2747,12 @@ def tenant_guard(client: Client, expect, quiet):
     name, vid = org.get("name"), org.get("current_vendor_account_id")
     if not vid or vid != client.va:
         raise Fatal(f"this API key belongs to vendor account {vid or 'unknown'}, not {client.va}")
-    if not expect:
-        raise Fatal(f"connected as {name} ({vid}). Set ABSTRACT_EXPECT_TENANT={vid} (or pass --expect-tenant {vid}) "
-                    f"so an export can never run against the wrong tenant.")
-    if expect != vid:
+    # The key belongs to the vendor account it was sent for (checked just above). ABSTRACT_EXPECT_TENANT is an
+    # optional second pin: when it is set, it must match.
+    if expect and expect != vid:
         raise Fatal(f"TENANT MISMATCH: connected as {name} ({vid}), expected {expect}")
-    log(f"tenant: {name} ({vid})", quiet=quiet)
+    log(f"Connected to {name} ({vid}) · " + ("production" if client.production else client.base.replace("https://", "")),
+        quiet=quiet)
     return {"name": name, "vendor_account_id": vid, "base_url": client.base, "production": client.production}
 
 

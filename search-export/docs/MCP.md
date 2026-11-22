@@ -22,12 +22,12 @@ You do not normally run either yourself: you tell your assistant how to start th
 
 ## Credentials
 
-The tool reads the same three settings as the command line (see [CLI.md](CLI.md), Credentials), from the environment the assistant starts it with:
+The tool reads the same settings as the command line (see [CLI.md](CLI.md), Credentials), from the environment the assistant starts it with:
 
 | Setting | Value |
 |---|---|
 | `ABSTRACT_VENDOR_ACCOUNT_ID` | Your vendor account ID. |
-| `ABSTRACT_EXPECT_TENANT` | The vendor account ID you expect. The tool refuses to work if the key belongs to another tenant. |
+| `ABSTRACT_EXPECT_TENANT` | Optional. Pins one tenant: the tool refuses to work when the key belongs to another. Without it, the key is still checked against `ABSTRACT_VENDOR_ACCOUNT_ID`. |
 | `ABSTRACT_API_KEY_COMMAND` | Recommended: a command that prints the key from your secret manager or keychain (examples in the README, Where the API key lives). The tool runs it once, without a shell, when it connects. |
 | `ABSTRACT_API_KEY` | Only if you cannot use a key command. The assistant's settings file then holds the key in plain text, so protect that file. |
 | `ABSTRACT_BASE_URL` | Only if Abstract gave you an API address other than `https://api.abstractsecurity.app`. |
@@ -52,10 +52,9 @@ Add the tool under `mcpServers`, with the full path to `abstract_search.py` in t
   "mcpServers": {
     "abstract-search": {
       "command": "python3",
-      "args": ["/full/path/to/abstract-search-export-0.5.0/app/abstract_search.py", "mcp"],
+      "args": ["/full/path/to/abstract-search-export-0.6.0/app/abstract_search.py", "mcp"],
       "env": {
         "ABSTRACT_VENDOR_ACCOUNT_ID": "AbC123xYz0",
-        "ABSTRACT_EXPECT_TENANT": "AbC123xYz0",
         "ABSTRACT_API_KEY_COMMAND": "security find-generic-password -s abstract-api -a api-key -w"
       }
     }
@@ -63,7 +62,7 @@ Add the tool under `mcpServers`, with the full path to `abstract_search.py` in t
 }
 ```
 
-On Windows, use `"command": "py"` and write each backslash in the path twice, for example `"C:\\Tools\\abstract-search-export-0.5.0\\app\\abstract_search.py"`. Quit and reopen Claude Desktop. Claude Desktop is not available for Linux; use Claude Code there.
+On Windows, use `"command": "py"` and write each backslash in the path twice, for example `"C:\\Tools\\abstract-search-export-0.6.0\\app\\abstract_search.py"`. Quit and reopen Claude Desktop. Claude Desktop is not available for Linux; use Claude Code there.
 
 ## Claude Code
 
@@ -72,9 +71,8 @@ From any folder:
 ```
 claude mcp add abstract-search -s user \
   -e ABSTRACT_VENDOR_ACCOUNT_ID=AbC123xYz0 \
-  -e ABSTRACT_EXPECT_TENANT=AbC123xYz0 \
   -e ABSTRACT_API_KEY_COMMAND='op read "op://Security/Abstract API/credential"' \
-  -- python3 /path/to/abstract-search-export-0.5.0/app/abstract_search.py mcp
+  -- python3 /path/to/abstract-search-export-0.6.0/app/abstract_search.py mcp
 ```
 
 `-s user` makes it available in every project. Check it with `claude mcp list`.
@@ -89,10 +87,9 @@ Create `.vscode/mcp.json` in your workspace (or run MCP: Add Server from the Com
     "abstract-search": {
       "type": "stdio",
       "command": "python3",
-      "args": ["/path/to/abstract-search-export-0.5.0/app/abstract_search.py", "mcp"],
+      "args": ["/path/to/abstract-search-export-0.6.0/app/abstract_search.py", "mcp"],
       "env": {
         "ABSTRACT_VENDOR_ACCOUNT_ID": "AbC123xYz0",
-        "ABSTRACT_EXPECT_TENANT": "AbC123xYz0",
         "ABSTRACT_API_KEY_COMMAND": "op read \"op://Security/Abstract API/credential\""
       }
     }

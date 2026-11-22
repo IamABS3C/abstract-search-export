@@ -28,6 +28,7 @@ This README is for people working in the repository. The customer reads `Start-H
 - [Run it on a schedule](#run-it-on-a-schedule)
 - [Use it from an AI assistant](#use-it-from-an-ai-assistant)
 - [Verifying, upgrading and uninstalling](#verifying-upgrading-and-uninstalling)
+- [Licence](#licence)
 <!-- repo-only:end -->
 
 | Item | Detail |
@@ -60,7 +61,7 @@ It is not a replacement for Abstract's search screens, dashboards or detections.
 | What you can do | Browser app | Guided terminal | Command line | AI assistant (MCP) | Read |
 |---|---|---|---|---|---|
 | Start: pick what you want to do | **Start** | Guided search & export | – | – | [Read](docs/USER-GUIDE.md#the-start-screen) |
-| Connect and check which tenant the key belongs to | Connect to your tenant, **Tenant** | Connect / switch tenant, What this tenant supports | `capabilities` | `status`, `capabilities` | [Read](docs/USER-GUIDE.md#connect) |
+| Connect and check which tenant the key belongs to | Connect to your tenant, **Tenant** | Connect / switch tenant, What this tenant supports | `status`, `capabilities` | `status`, `capabilities` | [Read](docs/USER-GUIDE.md#connect) |
 | Find datasets and the fields they fill | **Fields** | Browse fields of a dataset or of the tenant, Learn the fields of every dataset, List every dataset | `datasets`, `fields` | `datasets`, `fields`, `field_values` | [Read](docs/USER-GUIDE.md#fields-of-every-dataset) |
 | Build a search with filters, every operator | **Builder** | Guided search & export, Build or edit the search | `preview` | `preview` | [Read](docs/SEARCH-REFERENCE.md) |
 | Write KQL, checked against your tenant before it runs | **KQL** | Write or paste a KQL query | `kql` | `kql_check`, `kql_preview`, `kql_save` | [Read](docs/SEARCH-REFERENCE.md#how-a-kql-or-plain-english-search-is-checked-before-it-runs) |
@@ -98,7 +99,7 @@ Start with [docs/QUICK-START.md](docs/QUICK-START.md) for the shortest path in e
 **Commands in this guide run in the `app` folder.** Open a terminal there first, for example:
 
 ```bash
-cd ~/Downloads/abstract-search-export-0.5.0/app
+cd ~/Downloads/abstract-search-export-0.6.0/app
 ```
 
 ## What you need
@@ -128,7 +129,7 @@ The surest way is Terminal:
 The line looks like this:
 
 ```bash
-python3 ~/Downloads/abstract-search-export-0.5.0/app/abstract_search.py --web
+python3 ~/Downloads/abstract-search-export-0.6.0/app/abstract_search.py --web
 ```
 
 You can also double-click `Start-Mac.command`. The first time, macOS blocks it with **"Apple could not verify Start-Mac.command is free of malware"** and offers only Done and Move to Trash. To allow it: choose **Done**, open **System Settings, Privacy & Security**, scroll down, choose **Open Anyway** next to Start-Mac.command, enter your Mac password, and choose **Open Anyway** again. After that, double-click works. On a Mac managed by your company, Open Anyway may not be offered; use Terminal.
@@ -167,7 +168,7 @@ The browser app, the guided terminal and the command line offer the same steps u
 
 | Step | Browser app | Guided terminal & menu | Command line |
 |---|---|---|---|
-| Connect & see what your tenant supports | Connect, then the Tenant tab (Check again) | Connect step; menu: What this tenant supports | Set the `ABSTRACT_*` variables; `capabilities` |
+| Connect & see what your tenant supports | Connect, then the Tenant tab (Check again) | Connect step; menu: What this tenant supports | Set the `ABSTRACT_*` variables; `status`, `capabilities` |
 | Find datasets, saved views and fields | Dataset suggestions; Use a search from Abstract…; Fields tab | Menu: List every dataset; Saved views from Abstract; Browse fields of a dataset or of the tenant | `datasets`, `views`, `fields --dataset NAME` |
 | Build a search | Builder tab: Dataset, Filters, With more than one filter | Dataset and Filters steps (Match: …); menu: Build or edit the search | `--dataset`, `--where`, `--match`, or `--from-view`, `--from-file`, `--from-saved` |
 | Write KQL, or describe it in plain English | KQL tab; Plain English tab | Step 2: Write a KQL query, Describe it in plain English; menu: the same | `--kql`, `kql check`, `kql preview`, `kql save`, `nl` |
@@ -187,7 +188,7 @@ The browser app, the guided terminal and the command line offer the same steps u
 - **Exports contain your log data.** Treat every export folder as you treat the logs themselves: they can hold user names, IP addresses, URLs and message text. Keep them on an encrypted disk, share them only with people allowed to see that data, and delete them when you are done (Exports, Delete; or `exports --delete NAME`).
 - **Sharing the kit is safe; sharing exports is a decision.** The kit holds no tenant data, no keys and no settings. Exports, `manifest.json`, `search.json` and saved searches describe your tenant and your searches: share them deliberately.
 - **Never paste a key into a chat, ticket or file.** See [Where the API key comes from](#where-the-api-key-comes-from).
-- **Know which tenant you are on.** The header always shows the tenant name and ID. The command line refuses to run unless `ABSTRACT_EXPECT_TENANT` matches the key's tenant.
+- **Know which tenant you are on.** The header always shows the tenant name and ID. Every command that connects prints `Connected to <tenant name> (<vendor account id>) · production` first, on standard error, and `status` shows the tenant without searching anything. Abstract refuses a key that belongs to another vendor account. To pin one tenant for a scheduled job, set `ABSTRACT_EXPECT_TENANT`: every command then refuses to run when the key belongs to another.
 - **Big exports take time and disk.** A day of a busy source can be millions of events. Validate first: it shows the count and the plan before anything is written. See [Large exports](docs/EXPORTS.md#large-exports).
 - **Keep exports out of source control.** If you run the tool inside a repository or a dev container, set `ABX_OUT_ROOT` to a folder that is not committed.
 - **A zero is a claim.** "Nothing matched" is reported only after a second, independent check; widen the time range before you report that something did not happen.
@@ -237,7 +238,7 @@ Every setting is an environment variable, read when the tool starts. Nothing is 
 | `ABSTRACT_API_KEY_COMMAND` | A command that prints the API key from your vault (above). | None |
 | `ABSTRACT_API_KEY_FILE` | A file that holds the API key on one line, for a server that mounts secrets as files (Docker, Kubernetes). | None |
 | `ABSTRACT_API_KEY_FROM_NETWORK=1` | The tool sends no key: your network adds the `Authorization` header to requests for the API after they leave the computer. For managed environments that keep keys outside the machine. | Off |
-| `ABSTRACT_EXPECT_TENANT` | The vendor account ID the command line must be connected to; it refuses any other tenant. Required for command-line searches. | None |
+| `ABSTRACT_EXPECT_TENANT` | Optional. Pins one tenant, for scheduled jobs: every command refuses to run when the key belongs to another. | None |
 | `ABSTRACT_BASE_URL` | Only if Abstract gave you a different API address. | `https://api.abstractsecurity.app` |
 | `ABX_OUT_ROOT` | The folder that holds your exports and saved searches. | `~/AbstractExports` (Windows: `C:\Users\<you>\AbstractExports`) |
 | `HTTPS_PROXY`, `NO_PROXY` | Your company's web proxy. | None |
@@ -293,7 +294,7 @@ The kit includes a hidden `.devcontainer/devcontainer.json` (Python 3.12, nothin
 From this repository, the **Open in GitHub Codespaces** and **Open in DevPod** buttons at the top of this page start it for you. In a codespace or DevPod workspace opened from the repository, run the commands below from the `search-export` folder.
 <!-- repo-only:end -->
 
-- **GitHub Codespaces:** put the kit in a private repository, then add `ABSTRACT_API_KEY`, `ABSTRACT_VENDOR_ACCOUNT_ID` and `ABSTRACT_EXPECT_TENANT` as Codespaces secrets for that repository (Settings, Secrets and variables, Codespaces). Codespaces encrypts them and gives them to the codespace as environment variables; they are never written into the workspace. The dev container lists them as recommended secrets.
+- **GitHub Codespaces:** put the kit in a private repository, then add `ABSTRACT_API_KEY` and `ABSTRACT_VENDOR_ACCOUNT_ID` as Codespaces secrets for that repository (Settings, Secrets and variables, Codespaces). Codespaces encrypts them and gives them to the codespace as environment variables; they are never written into the workspace. The dev container lists them as recommended secrets. To pin the tenant as well, add `ABSTRACT_EXPECT_TENANT` the same way.
 - **VS Code dev container on your own machine:** open the folder and choose Reopen in Container. Give the container the key through `ABSTRACT_API_KEY_COMMAND` (a vault CLI that works inside the container) or type it when asked. Do not put a key in `devcontainer.json`, a `.env` file or the repository.
 
 Then, in the container's terminal, in the `app` folder:
@@ -468,12 +469,14 @@ Set the credentials in the environment, never in a script:
 ```bash
 printf 'API key: '; read -rs ABSTRACT_API_KEY; echo; export ABSTRACT_API_KEY   # the key is not echoed
 export ABSTRACT_VENDOR_ACCOUNT_ID=<your vendor account id>
-export ABSTRACT_EXPECT_TENANT=<the same id>               # refuses to run against any other tenant
 ```
+
+Abstract refuses a key that belongs to another vendor account. To pin the tenant for a scheduled job as well, also set `ABSTRACT_EXPECT_TENANT` to the same ID.
 
 Then, in the `app` folder, run the same steps as the browser app:
 
 ```bash
+python3 abstract_search.py status
 python3 abstract_search.py capabilities
 python3 abstract_search.py datasets
 python3 abstract_search.py preview  --dataset "Okta" --where event.outcome=failure --last 24h
@@ -490,6 +493,8 @@ python3 abstract_search.py export --kql 'events | where data_stream.dataset =~ "
 python3 abstract_search.py nl "failed Okta sign-ins" --preview --last 24h
 python3 abstract_search.py fieldsets create --name "Okta triage" --from-dataset "Okta"          # shows the change; add --yes to make it
 ```
+
+`status` shows which tenant you are connected to, the API address, where the key comes from (never the key) and whether a tenant pin is set. Every command that connects prints one line first, on standard error, so `--json` output stays clean: `Connected to <tenant name> (<vendor account id>) · production`. `--quiet` hides it.
 
 `--where` takes a field and values, or any condition written as in Abstract's search, in double quotes. Every command prints each call it makes to Abstract's API to standard error as it happens, the key masked as `********`; `--hide-api` turns it off.
 
@@ -543,20 +548,24 @@ In the browser app: **Export → Run it on a schedule**. Details: [docs/AUTOMATI
 
 ## Verifying, upgrading and uninstalling
 
-**Verify the download.** The kit comes as `abstract-search-export-0.5.0.zip`, with `abstract-search-export-0.5.0.zip.sha256` next to it. Check the zip before you unzip it:
+**Verify the download.** The kit comes as `abstract-search-export-0.6.0.zip`, with `abstract-search-export-0.6.0.zip.sha256` next to it. Check the zip before you unzip it:
 
 ```bash
-shasum -a 256 -c abstract-search-export-0.5.0.zip.sha256      # macOS
-sha256sum -c abstract-search-export-0.5.0.zip.sha256          # Linux
+shasum -a 256 -c abstract-search-export-0.6.0.zip.sha256      # macOS
+sha256sum -c abstract-search-export-0.6.0.zip.sha256          # Linux
 ```
 
-In PowerShell, `(Get-FileHash .\abstract-search-export-0.5.0.zip).Hash -eq (Get-Content .\abstract-search-export-0.5.0.zip.sha256).Split(' ')[0]` prints `True` when the file is intact. `python3 abstract_search.py --version` prints the version and the kit's build record; quote it when you ask for help.
+In PowerShell, `(Get-FileHash .\abstract-search-export-0.6.0.zip).Hash -eq (Get-Content .\abstract-search-export-0.6.0.zip.sha256).Split(' ')[0]` prints `True` when the file is intact. `python3 abstract_search.py --version` prints the version and the kit's build record; quote it when you ask for help.
 
 **Upgrade.** Unzip the new version into a new folder and delete the old one when you are happy. Your exports folder is separate, so saved searches carry across, and an unfinished export from an earlier version can be resumed by the new one.
 
 **Uninstall.** Delete the kit folder and the exports folder (`~/AbstractExports`, or your `ABX_OUT_ROOT`), after keeping any exports you need. Remove any scheduled job you set up. The tool writes nothing else.
 
 The screenshots in this guide were taken from the real app connected to an offline demo tenant filled with invented data ("Example Corp"). They contain no customer data.
+
+## Licence
+
+MIT. See `LICENSE`.
 
 <!-- repo-only:start -->
 ## For maintainers

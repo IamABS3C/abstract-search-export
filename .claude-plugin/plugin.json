@@ -1,0 +1,74 @@
+{
+  "name": "abstract-search-export",
+  "version": "0.6.0",
+  "description": "Search, validate and export every event in an Abstract Security tenant, and keep its saved views and fieldsets as code: the MCP server, a skill that knows the tool, and an export agent.",
+  "author": {
+    "name": "The Abstract Search & Export authors",
+    "url": "https://github.com/IamABS3C/abstract-search-export"
+  },
+  "homepage": "https://github.com/IamABS3C/abstract-search-export",
+  "repository": "https://github.com/IamABS3C/abstract-search-export",
+  "license": "MIT",
+  "keywords": [
+    "abstract",
+    "security",
+    "siem",
+    "search",
+    "export",
+    "kql",
+    "mcp"
+  ],
+  "skills": [
+    "./.claude/skills/"
+  ],
+  "userConfig": {
+    "vendor_account_id": {
+      "type": "string",
+      "title": "Vendor account ID",
+      "description": "Your Abstract vendor account ID. The key is checked against it, and every answer names the tenant.",
+      "required": true
+    },
+    "api_key": {
+      "type": "string",
+      "title": "API key",
+      "description": "An Abstract API key, kept in the secure credential store. Leave empty to use the command below.",
+      "sensitive": true,
+      "required": false
+    },
+    "api_key_command": {
+      "type": "string",
+      "title": "Or: a command that prints the key",
+      "description": "Reads the key when it is needed, for example: op read \"op://Security/Abstract API/credential\" (1Password) or security find-generic-password -s abstract-api -a api-key -w (macOS Keychain).",
+      "required": false
+    },
+    "base_url": {
+      "type": "string",
+      "title": "API address",
+      "description": "Leave as it is unless Abstract gave you another address.",
+      "default": "https://api.abstractsecurity.app"
+    },
+    "allow_writes": {
+      "type": "boolean",
+      "title": "Allow changes to saved views and fieldsets",
+      "description": "Off: read-only; changes are planned and shown, never made. On: a change you approve is made.",
+      "default": false
+    }
+  },
+  "mcpServers": {
+    "abstract-search": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/search-export/abstract_search.py",
+        "mcp"
+      ],
+      "env": {
+        "ABSTRACT_VENDOR_ACCOUNT_ID": "${user_config.vendor_account_id}",
+        "ABSTRACT_API_KEY": "${user_config.api_key}",
+        "ABSTRACT_API_KEY_COMMAND": "${user_config.api_key_command}",
+        "ABSTRACT_BASE_URL": "${user_config.base_url}",
+        "ABSTRACT_MCP_ALLOW_WRITES": "${user_config.allow_writes}"
+      }
+    }
+  }
+}
