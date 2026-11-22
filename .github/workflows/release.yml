@@ -79,10 +79,19 @@ jobs:
             *@*) echo "::error::DOCKERHUB_USERNAME is an email address. Set it to your Docker ID (the name in hub.docker.com/u/<name>)."; exit 1 ;;
             *[!a-zA-Z0-9_-]*) echo "::error::DOCKERHUB_USERNAME has a character a Docker ID cannot have. Set it to your Docker ID only."; exit 1 ;;
           esac
-          case "${token}" in
-            *[![:print:]]*) echo "::error::DOCKERHUB_TOKEN has a character that cannot be sent. Create a new access token and paste it again."; exit 1 ;;
-          esac
-          printf '%s' "${token}" | docker login -u "${user}" --password-stdin
+          # The shape of the token, never the token: its length, whether it is plain ASCII, and whether it starts the
+          # way Docker Hub access tokens do (dckr_pat_ for a personal one, dckr_oat_ for an organisation one).
+          kind=other
+          case "${token}" in dckr_pat_*) kind=personal ;; dckr_oat_*) kind=organisation ;; esac
+          ascii=yes
+          if printf '%s' "${token}" | LC_ALL=C grep -q '[^!-~]'; then ascii=no; fi
+          echo "Docker ID: ${#user} characters. Token: ${#token} characters, ASCII only: ${ascii}, kind: ${kind}."
+          if [ "${ascii}" = no ]; then echo "::error::DOCKERHUB_TOKEN has a character that cannot be sent (a curly quote, a bullet or similar). Create a new access token and paste it again."; exit 1; fi
+          if [ "${kind}" = other ]; then echo "::warning::DOCKERHUB_TOKEN does not start with dckr_pat_ or dckr_oat_, so it is probably not a Docker Hub access token (an account password, or something else that was copied)."; fi
+          if ! printf '%s' "${token}" | docker login -u "${user}" --password-stdin; then
+            echo "::error::Docker Hub refused the sign-in. Create an access token at hub.docker.com (Account settings, Personal access tokens, Read and Write), set DOCKERHUB_TOKEN to it and DOCKERHUB_USERNAME to your Docker ID, then run this workflow again."
+            exit 1
+          fi
           echo "DOCKERHUB_ID=${user}" >> "$GITHUB_ENV"
       - id: names
         name: Image names
