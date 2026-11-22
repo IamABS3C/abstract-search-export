@@ -103,7 +103,18 @@ docker compose logs app
 docker compose down
 ```
 
-Where the image is published to a registry, set `ABX_IMAGE` to its name and the script and the Compose file use it without building. The start script on its own, outside the program folder, pulls `ghcr.io/iamabs3c/abstract-search-export`.
+The image is also published, so you can run it without this folder. It is the same image in two registries, for Intel and Arm, tagged with the version (for example `0.5.0`), the minor line (`0.5`) and `latest`:
+
+| Registry | Image |
+|---|---|
+| Docker Hub | `iamabs3c/abstract-search-export` |
+| GitHub's container registry | `ghcr.io/iamabs3c/abstract-search-export` |
+
+```
+docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export
+```
+
+Set `ABX_IMAGE` to either name and the start script and the Compose file use it without building. The start script on its own, outside the program folder, pulls `ghcr.io/iamabs3c/abstract-search-export`; set `ABX_PUBLISHED_IMAGE=iamabs3c/abstract-search-export` to pull from Docker Hub instead.
 
 ## Another port
 

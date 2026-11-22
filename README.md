@@ -12,7 +12,7 @@ Pick the one that fits. Every route ends at the same app.
 
 | You have | Do this | Details |
 |---|---|---|
-| **Docker** | `docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" ghcr.io/iamabs3c/abstract-search-export` and open the link it prints | [Docker](#docker) |
+| **Docker** | `docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export` and open the link it prints | [Docker](#docker) |
 | **Nothing installed** | Download the single file for your system from [Releases](../../releases/latest) and run it | [A single file](#a-single-file) |
 | **Python 3.8 or newer** | `python3 search-export/abstract_search.py --web` | [Python](#python) |
 | **A browser and a GitHub account** | [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/IamABS3C/abstract-search-export?quickstart=1) | [Codespaces and DevPod](docs/codespaces-and-devpod.md) |
@@ -51,7 +51,7 @@ python3 search-export/abstract_search.py capabilities
 The image holds Python and the tool. It runs as an unprivileged user and downloads nothing when it starts.
 
 ```
-docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" ghcr.io/iamabs3c/abstract-search-export
+docker run --rm -p 127.0.0.1:8765:8765 -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export
 ```
 
 - Open the link in the output. In Docker Desktop, it is in the container's **Logs** tab.
@@ -79,14 +79,17 @@ The same image runs single commands and the MCP server:
 
 ```
 docker run --rm -e ABSTRACT_VENDOR_ACCOUNT_ID -e ABSTRACT_EXPECT_TENANT -e ABSTRACT_API_KEY \
-  -v "$HOME/AbstractExports:/exports" ghcr.io/iamabs3c/abstract-search-export export --dataset "Okta" --last 24h --merge
+  -v "$HOME/AbstractExports:/exports" iamabs3c/abstract-search-export export --dataset "Okta" --last 24h --merge
 ```
 
 Compose, another port, secret files, scheduled exports and how the container is locked down: [Run it in Docker](search-export/docs/DOCKER.md).
 
 | Image | Where |
 |---|---|
-| `ghcr.io/iamabs3c/abstract-search-export` | GitHub's container registry. Tags: the version (`0.5.0`), the minor line (`0.5`) and `latest`. Intel and Arm. |
+| `iamabs3c/abstract-search-export` | [Docker Hub](https://hub.docker.com/r/iamabs3c/abstract-search-export). |
+| `ghcr.io/iamabs3c/abstract-search-export` | GitHub's container registry. The same image. |
+
+Both carry the version (`0.5.0`), the minor line (`0.5`) and `latest`, for Intel and Arm.
 
 ## A single file
 
