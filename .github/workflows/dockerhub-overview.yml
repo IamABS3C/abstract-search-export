@@ -1,0 +1,41 @@
+name: dockerhub-overview
+
+# Keeps the Docker Hub page for the image in step with docs/dockerhub.md. Uses the same two repository secrets as
+# the release (DOCKERHUB_USERNAME, DOCKERHUB_TOKEN). Docker Hub only lets a token change a repository's overview
+# when the token has the Read, Write, Delete scope; with a Read and Write token this job fails and nothing else does.
+
+on:
+  push:
+    branches: [main]
+    paths: [docs/dockerhub.md, .github/workflows/dockerhub-overview.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  overview:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: who
+        name: Docker Hub account and repository
+        run: |
+          if [ -z "${DOCKERHUB_USERNAME}" ]; then echo "::notice::No DOCKERHUB_USERNAME secret, so there is no Docker Hub page to update."; echo "skip=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          user=$(printf '%s' "${DOCKERHUB_USERNAME}" | tr -d '[:space:]')
+          ns=$(printf '%s' "${DOCKERHUB_NAMESPACE:-$user}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          echo "user=${user}" >> "$GITHUB_OUTPUT"
+          echo "repo=${ns}/abstract-search-export" >> "$GITHUB_OUTPUT"
+      - name: Update the Docker Hub overview
+        if: steps.who.outputs.skip != '1'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ steps.who.outputs.user }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ steps.who.outputs.repo }}
+          short-description: Search an Abstract Security tenant and export every matching event, with proof.
+          readme-filepath: docs/dockerhub.md
+          enable-url-completion: true

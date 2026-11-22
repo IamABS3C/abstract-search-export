@@ -169,6 +169,8 @@ jobs:
       attestations: write
     env:
       VERSION: ${{ needs.version.outputs.version }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -192,16 +194,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           image="ghcr.io/$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          hub="$(printf '%s' "${DOCKERHUB_NAMESPACE:-${DOCKERHUB_USERNAME}}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if [ -n "${hub}" ]; then pull="${hub}/abstract-search-export"; else pull="${image}"; fi
           cat > notes.md <<EOF
           ## Run it
 
           **Docker** (nothing else to install):
 
           \`\`\`
-          docker run --rm -p 127.0.0.1:8765:8765 -v "\$HOME/AbstractExports:/exports" ${image}:${VERSION}
+          docker run --rm -p 127.0.0.1:8765:8765 -v "\$HOME/AbstractExports:/exports" ${pull}:${VERSION}
           \`\`\`
 
-          Open the link it prints, then connect with your vendor account ID and API key.
+          Open the link it prints, then connect with your vendor account ID and API key. The same image is on GitHub's registry as \`${image}\`${hub:+ and on Docker Hub as \`${pull}\`}, for Intel and Arm.
 
           **A single file** (no Python, no Docker): download the file for your system below, check it against \`SHA256SUMS\`, and run it. \`abstract-search --web\` opens the browser app; with no arguments it opens the guided terminal.
 
